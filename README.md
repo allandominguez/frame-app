@@ -1,5 +1,8 @@
 # frame
 
+[![Lint](https://github.com/allandominguez/frame-app/actions/workflows/lint.yml/badge.svg)](https://github.com/allandominguez/frame-app/actions/workflows/lint.yml)
+[![Test](https://github.com/allandominguez/frame-app/actions/workflows/test.yml/badge.svg)](https://github.com/allandominguez/frame-app/actions/workflows/test.yml)
+
 > **Status:** 🚧 Early-stage — foundation and environment setup in progress.
 
 A private, local-first daily photo journal. Capture one moment per day, with an optional note. All data lives on-device; no account required.
