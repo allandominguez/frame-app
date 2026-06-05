@@ -107,7 +107,7 @@ npm run typecheck  # tsc --noEmit
 npm test           # Jest
 ```
 
-Pre-commit hooks run ESLint --fix, Prettier, and secrets scanning (secretlint) on staged files.
+Pre-commit hooks run gitleaks (secrets scanning) and lint-staged (ESLint --fix, Prettier) on staged files.
 
 ---
 
@@ -135,7 +135,7 @@ frame is a portfolio piece demonstrating full-stack mobile product development â
 
 - Clean git history and meaningful commits
 - Behaviour-driven tests with Jest and React Native Testing Library
-- Code quality automation (ESLint, Prettier, Husky, lint-staged, secretlint)
+- Code quality automation (ESLint, Prettier, Husky, lint-staged, gitleaks)
 - CI/CD pipeline with GitHub Actions
 - TypeScript strict mode throughout
 - Feature-cohesion folder structure
