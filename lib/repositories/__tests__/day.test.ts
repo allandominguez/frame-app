@@ -1,0 +1,170 @@
+import { deleteDay, DayEntryInput, getAllDays, getDay, upsertDay } from '../day'
+
+const mockDayStore = new Map<string, Record<string, unknown>>()
+
+jest.mock('expo-sqlite', () => ({
+  openDatabaseAsync: jest.fn().mockResolvedValue({
+    execAsync: jest.fn().mockResolvedValue(undefined),
+    getFirstAsync: jest.fn().mockImplementation(async (sql: string, params?: unknown[]) => {
+      if (/pragma user_version/i.test(sql)) return { user_version: 1 }
+      if (/from day_entries where date/i.test(sql))
+        return mockDayStore.get(params![0] as string) ?? null
+      return null
+    }),
+    getAllAsync: jest.fn().mockImplementation(async (sql: string) => {
+      if (/from day_entries/i.test(sql)) {
+        return [...mockDayStore.values()].sort((a, b) =>
+          (b.date as string).localeCompare(a.date as string),
+        )
+      }
+      return []
+    }),
+    runAsync: jest.fn().mockImplementation(async (sql: string, params?: unknown[]) => {
+      if (/insert into day_entries/i.test(sql)) {
+        const [
+          date,
+          photo_path,
+          note_text,
+          latitude,
+          longitude,
+          location_name,
+          location_source,
+          created_at,
+          updated_at,
+        ] = params as [
+          string,
+          string | null,
+          string | null,
+          number | null,
+          number | null,
+          string | null,
+          string | null,
+          string,
+          string,
+        ]
+        const existing = mockDayStore.get(date)
+        mockDayStore.set(date, {
+          date,
+          photo_path,
+          note_text,
+          latitude,
+          longitude,
+          location_name,
+          location_source,
+          created_at: existing ? (existing.created_at as string) : created_at,
+          updated_at,
+        })
+      } else if (/delete from day_entries/i.test(sql)) {
+        mockDayStore.delete(params![0] as string)
+      }
+      return { lastInsertRowId: 0, changes: 1 }
+    }),
+  }),
+}))
+
+const makeInput = (overrides: Partial<DayEntryInput> = {}): DayEntryInput => ({
+  date: '2026-06-08',
+  photo_path: null,
+  note_text: null,
+  latitude: null,
+  longitude: null,
+  location_name: null,
+  location_source: null,
+  ...overrides,
+})
+
+beforeEach(() => {
+  mockDayStore.clear()
+})
+
+describe('upsertDay', () => {
+  it('stores a new entry that can be retrieved', async () => {
+    await upsertDay(
+      makeInput({
+        photo_path: '/photos/2026-06-08.jpg',
+        note_text: 'A great day',
+        latitude: 51.5074,
+        longitude: -0.1278,
+        location_name: 'London',
+        location_source: 'device',
+      }),
+    )
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.date).toBe('2026-06-08')
+    expect(entry?.photo_path).toBe('/photos/2026-06-08.jpg')
+    expect(entry?.note_text).toBe('A great day')
+    expect(entry?.latitude).toBe(51.5074)
+    expect(entry?.longitude).toBe(-0.1278)
+    expect(entry?.location_name).toBe('London')
+    expect(entry?.location_source).toBe('device')
+  })
+
+  it('preserves created_at when updating an existing entry', async () => {
+    await upsertDay(makeInput({ note_text: 'Original' }))
+    const original = await getDay('2026-06-08')
+
+    await upsertDay(makeInput({ note_text: 'Updated' }))
+    const updated = await getDay('2026-06-08')
+
+    expect(updated?.created_at).toBe(original?.created_at)
+    expect(updated?.note_text).toBe('Updated')
+  })
+
+  it('overwrites all non-timestamp fields on update', async () => {
+    await upsertDay(
+      makeInput({ photo_path: '/old.jpg', latitude: 1.0, longitude: 2.0, location_source: 'exif' }),
+    )
+    await upsertDay(
+      makeInput({
+        photo_path: '/new.jpg',
+        latitude: 3.0,
+        longitude: 4.0,
+        location_source: 'device',
+      }),
+    )
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.photo_path).toBe('/new.jpg')
+    expect(entry?.latitude).toBe(3.0)
+    expect(entry?.location_source).toBe('device')
+  })
+})
+
+describe('getDay', () => {
+  it('returns null when no entry exists for the date', async () => {
+    expect(await getDay('2026-01-01')).toBeNull()
+  })
+
+  it('returns the entry for an existing date', async () => {
+    await upsertDay(makeInput({ note_text: 'Hello' }))
+    expect((await getDay('2026-06-08'))?.note_text).toBe('Hello')
+  })
+})
+
+describe('getAllDays', () => {
+  it('returns an empty array when no entries exist', async () => {
+    expect(await getAllDays()).toEqual([])
+  })
+
+  it('returns all entries ordered by date descending', async () => {
+    await upsertDay(makeInput({ date: '2026-06-06' }))
+    await upsertDay(makeInput({ date: '2026-06-08' }))
+    await upsertDay(makeInput({ date: '2026-06-07' }))
+
+    const dates = (await getAllDays()).map((e) => e.date)
+    expect(dates).toEqual(['2026-06-08', '2026-06-07', '2026-06-06'])
+  })
+})
+
+describe('deleteDay', () => {
+  it('removes the entry for the given date', async () => {
+    await upsertDay(makeInput())
+    await deleteDay('2026-06-08')
+    expect(await getDay('2026-06-08')).toBeNull()
+  })
+
+  it('does nothing when the date does not exist', async () => {
+    await expect(deleteDay('2026-01-01')).resolves.not.toThrow()
+  })
+})
