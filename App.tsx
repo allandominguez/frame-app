@@ -1,7 +1,6 @@
 import { StatusBar } from 'expo-status-bar'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import { Colors, Spacing, Typography } from './lib/design'
-import { useAppFonts } from './lib/design/fonts'
+import { Colors, Spacing, Typography, useAppFonts } from './lib/design'
 
 export default function App() {
   const [fontsLoaded] = useAppFonts()
