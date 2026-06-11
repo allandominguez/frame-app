@@ -70,6 +70,8 @@ const makeInput = (overrides: Partial<DayEntryInput> = {}): DayEntryInput => ({
   longitude: null,
   location_name: null,
   location_source: null,
+  accent_color: null,
+  share_color: null,
   ...overrides,
 })
 

@@ -10,6 +10,8 @@ export type DayEntry = {
   location_source: 'exif' | 'device' | 'place' | null
   created_at: string
   updated_at: string
+  accent_color: string | null
+  share_color: string | null
 }
 
 export type DayEntryInput = Omit<DayEntry, 'created_at' | 'updated_at'>
