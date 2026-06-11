@@ -29,6 +29,8 @@ jest.mock('expo-sqlite', () => ({
           longitude,
           location_name,
           location_source,
+          accent_color,
+          share_color,
           created_at,
           updated_at,
         ] = params as [
@@ -37,6 +39,8 @@ jest.mock('expo-sqlite', () => ({
           string | null,
           number | null,
           number | null,
+          string | null,
+          string | null,
           string | null,
           string | null,
           string,
@@ -51,6 +55,8 @@ jest.mock('expo-sqlite', () => ({
           longitude,
           location_name,
           location_source,
+          accent_color,
+          share_color,
           created_at: existing ? (existing.created_at as string) : created_at,
           updated_at,
         })
@@ -70,6 +76,8 @@ const makeInput = (overrides: Partial<DayEntryInput> = {}): DayEntryInput => ({
   longitude: null,
   location_name: null,
   location_source: null,
+  accent_color: null,
+  share_color: null,
   ...overrides,
 })
 
@@ -128,6 +136,31 @@ describe('upsertDay', () => {
     expect(entry?.photo_path).toBe('/new.jpg')
     expect(entry?.latitude).toBe(3.0)
     expect(entry?.location_source).toBe('device')
+  })
+
+  it('stores and retrieves accent_color and share_color', async () => {
+    await upsertDay(makeInput({ accent_color: '#A3C4F5', share_color: 'blue' }))
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.accent_color).toBe('#A3C4F5')
+    expect(entry?.share_color).toBe('blue')
+  })
+
+  it('stores null for accent_color and share_color when not provided', async () => {
+    await upsertDay(makeInput())
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.accent_color).toBeNull()
+    expect(entry?.share_color).toBeNull()
+  })
+
+  it('overwrites accent_color and share_color on update', async () => {
+    await upsertDay(makeInput({ accent_color: '#111111', share_color: 'black' }))
+    await upsertDay(makeInput({ accent_color: '#A3C4F5', share_color: 'blue' }))
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.accent_color).toBe('#A3C4F5')
+    expect(entry?.share_color).toBe('blue')
   })
 })
 
