@@ -20,8 +20,8 @@ export async function upsertDay(input: DayEntryInput): Promise<void> {
   const db = await openDatabase()
   const now = new Date().toISOString()
   await db.runAsync(
-    `INSERT INTO day_entries (date, photo_path, note_text, latitude, longitude, location_name, location_source, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO day_entries (date, photo_path, note_text, latitude, longitude, location_name, location_source, accent_color, share_color, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(date) DO UPDATE SET
        photo_path      = excluded.photo_path,
        note_text       = excluded.note_text,
@@ -29,6 +29,8 @@ export async function upsertDay(input: DayEntryInput): Promise<void> {
        longitude       = excluded.longitude,
        location_name   = excluded.location_name,
        location_source = excluded.location_source,
+       accent_color    = excluded.accent_color,
+       share_color     = excluded.share_color,
        updated_at      = excluded.updated_at`,
     [
       input.date,
@@ -38,6 +40,8 @@ export async function upsertDay(input: DayEntryInput): Promise<void> {
       input.longitude,
       input.location_name,
       input.location_source,
+      input.accent_color,
+      input.share_color,
       now,
       now,
     ],
