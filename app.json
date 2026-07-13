@@ -23,7 +23,19 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "frame needs camera access to capture today's photo."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "frame needs access to your photos to choose today's photo."
+        }
+      ]
     ]
   }
 }
