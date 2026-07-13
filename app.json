@@ -35,7 +35,8 @@
         {
           "photosPermission": "frame needs access to your photos to choose today's photo."
         }
-      ]
+      ],
+      "expo-asset"
     ]
   }
 }
