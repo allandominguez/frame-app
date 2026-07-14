@@ -5,6 +5,7 @@ const mockRequestCameraPermission = jest.fn()
 const mockRequestMediaLibraryPermission = jest.fn()
 const mockLaunchCameraAsync = jest.fn()
 const mockLaunchImageLibraryAsync = jest.fn()
+const mockSavePhoto = jest.fn()
 
 jest.mock('../useCapturePermissions', () => ({
   useCapturePermissions: () => ({
@@ -20,12 +21,17 @@ jest.mock('expo-image-picker', () => ({
   useMediaLibraryPermissions: () => [null, jest.fn()],
 }))
 
+jest.mock('../../../../lib/storage/photoStorage', () => ({
+  savePhoto: (...args: unknown[]) => mockSavePhoto(...args),
+}))
+
 describe('usePhotoPicker', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('sheet is hidden initially', () => {
+  it('sheet is hidden and no pending photo initially', () => {
     const { result } = renderHook(() => usePhotoPicker(jest.fn()))
     expect(result.current.sheetVisible).toBe(false)
+    expect(result.current.pendingUri).toBeNull()
   })
 
   it('openSheet makes the sheet visible', () => {
@@ -46,12 +52,13 @@ describe('usePhotoPicker', () => {
   })
 
   describe('Take photo', () => {
-    it('calls onPhotoSelected with the URI when camera permission is granted and photo is taken', async () => {
+    it('saves the photo and calls onPhotoSelected with the local path', async () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({
         canceled: false,
-        assets: [{ uri: 'file://photo.jpg' }],
+        assets: [{ uri: 'file://camera-temp.jpg' }],
       })
+      mockSavePhoto.mockResolvedValue('file://documents/photos/123.jpg')
       const onPhotoSelected = jest.fn()
       const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
 
@@ -59,10 +66,11 @@ describe('usePhotoPicker', () => {
         await result.current.sheetProps.onTakePhoto()
       })
 
-      expect(onPhotoSelected).toHaveBeenCalledWith('file://photo.jpg')
+      expect(mockSavePhoto).toHaveBeenCalledWith('file://camera-temp.jpg')
+      expect(onPhotoSelected).toHaveBeenCalledWith('file://documents/photos/123.jpg')
     })
 
-    it('does not call onPhotoSelected when the user cancels the camera', async () => {
+    it('does not save or call onPhotoSelected when the user cancels the camera', async () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({ canceled: true, assets: null })
       const onPhotoSelected = jest.fn()
@@ -72,19 +80,18 @@ describe('usePhotoPicker', () => {
         await result.current.sheetProps.onTakePhoto()
       })
 
+      expect(mockSavePhoto).not.toHaveBeenCalled()
       expect(onPhotoSelected).not.toHaveBeenCalled()
     })
 
-    it('does not call onPhotoSelected when camera permission is denied', async () => {
+    it('does not launch the camera when permission is denied', async () => {
       mockRequestCameraPermission.mockResolvedValue('denied')
-      const onPhotoSelected = jest.fn()
-      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
+      const { result } = renderHook(() => usePhotoPicker(jest.fn()))
 
       await act(async () => {
         await result.current.sheetProps.onTakePhoto()
       })
 
-      expect(onPhotoSelected).not.toHaveBeenCalled()
       expect(mockLaunchCameraAsync).not.toHaveBeenCalled()
     })
 
@@ -99,7 +106,7 @@ describe('usePhotoPicker', () => {
       expect(result.current.permissionBlocked).toBe(true)
     })
 
-    it('closes the sheet before launching the camera', async () => {
+    it('closes the sheet before launching the camera then re-opens it if the user cancels', async () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({ canceled: true, assets: null })
       const { result } = renderHook(() => usePhotoPicker(jest.fn()))
@@ -109,50 +116,140 @@ describe('usePhotoPicker', () => {
         await result.current.sheetProps.onTakePhoto()
       })
 
-      expect(result.current.sheetVisible).toBe(false)
+      expect(result.current.sheetVisible).toBe(true)
+    })
+
+    it('reflects isSaving while the photo is being saved', async () => {
+      mockRequestCameraPermission.mockResolvedValue('granted')
+      mockLaunchCameraAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'file://camera-temp.jpg' }],
+      })
+      let resolveSave!: (path: string) => void
+      mockSavePhoto.mockReturnValue(new Promise<string>((res) => (resolveSave = res)))
+      const { result } = renderHook(() => usePhotoPicker(jest.fn()))
+
+      act(() => {
+        result.current.sheetProps.onTakePhoto()
+      })
+      await act(async () => {})
+
+      expect(result.current.isSaving).toBe(true)
+
+      await act(async () => resolveSave('file://documents/photos/123.jpg'))
+
+      expect(result.current.isSaving).toBe(false)
     })
   })
 
   describe('Choose from gallery', () => {
-    it('calls onPhotoSelected with the URI when media permission is granted and photo is chosen', async () => {
+    it('sets pendingUri after a photo is selected so the user can preview before saving', async () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('granted')
       mockLaunchImageLibraryAsync.mockResolvedValue({
         canceled: false,
-        assets: [{ uri: 'file://gallery.jpg' }],
+        assets: [{ uri: 'content://gallery/photo.jpg' }],
       })
+      const { result } = renderHook(() => usePhotoPicker(jest.fn()))
+
+      await act(async () => {
+        await result.current.sheetProps.onChooseFromGallery()
+      })
+
+      expect(result.current.pendingUri).toBe('content://gallery/photo.jpg')
+      expect(mockSavePhoto).not.toHaveBeenCalled()
+    })
+
+    it('saves and calls onPhotoSelected when the user confirms the preview', async () => {
+      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
+      mockLaunchImageLibraryAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'content://gallery/photo.jpg' }],
+      })
+      mockSavePhoto.mockResolvedValue('file://documents/photos/456.jpg')
       const onPhotoSelected = jest.fn()
       const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
 
       await act(async () => {
         await result.current.sheetProps.onChooseFromGallery()
       })
+      await act(async () => {
+        await result.current.onConfirmPhoto()
+      })
 
-      expect(onPhotoSelected).toHaveBeenCalledWith('file://gallery.jpg')
+      expect(mockSavePhoto).toHaveBeenCalledWith('content://gallery/photo.jpg')
+      expect(onPhotoSelected).toHaveBeenCalledWith('file://documents/photos/456.jpg')
+      expect(result.current.pendingUri).toBeNull()
     })
 
-    it('does not call onPhotoSelected when the user cancels the gallery picker', async () => {
+    it('re-opens the gallery when the user cancels the preview', async () => {
+      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
+      mockLaunchImageLibraryAsync
+        .mockResolvedValueOnce({
+          canceled: false,
+          assets: [{ uri: 'content://gallery/first.jpg' }],
+        })
+        .mockResolvedValueOnce({
+          canceled: false,
+          assets: [{ uri: 'content://gallery/second.jpg' }],
+        })
+      const { result } = renderHook(() => usePhotoPicker(jest.fn()))
+
+      await act(async () => {
+        await result.current.sheetProps.onChooseFromGallery()
+      })
+      await act(async () => {
+        await result.current.onCancelPreview()
+      })
+
+      expect(mockLaunchImageLibraryAsync).toHaveBeenCalledTimes(2)
+      expect(result.current.pendingUri).toBe('content://gallery/second.jpg')
+    })
+
+    it('re-opens the sheet when the user closes the re-opened gallery without selecting a photo', async () => {
+      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
+      mockLaunchImageLibraryAsync
+        .mockResolvedValueOnce({
+          canceled: false,
+          assets: [{ uri: 'content://gallery/photo.jpg' }],
+        })
+        .mockResolvedValueOnce({ canceled: true, assets: null })
+      const onPhotoSelected = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
+
+      await act(async () => {
+        await result.current.sheetProps.onChooseFromGallery()
+      })
+      await act(async () => {
+        await result.current.onCancelPreview()
+      })
+
+      expect(result.current.pendingUri).toBeNull()
+      expect(result.current.sheetVisible).toBe(true)
+      expect(mockSavePhoto).not.toHaveBeenCalled()
+      expect(onPhotoSelected).not.toHaveBeenCalled()
+    })
+
+    it('re-opens the sheet when the user closes the gallery without selecting a photo', async () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('granted')
       mockLaunchImageLibraryAsync.mockResolvedValue({ canceled: true, assets: null })
-      const onPhotoSelected = jest.fn()
-      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
+      const { result } = renderHook(() => usePhotoPicker(jest.fn()))
 
       await act(async () => {
         await result.current.sheetProps.onChooseFromGallery()
       })
 
-      expect(onPhotoSelected).not.toHaveBeenCalled()
+      expect(result.current.pendingUri).toBeNull()
+      expect(result.current.sheetVisible).toBe(true)
     })
 
-    it('does not call onPhotoSelected when media library permission is denied', async () => {
+    it('does not launch the gallery when permission is denied', async () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('denied')
-      const onPhotoSelected = jest.fn()
-      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
+      const { result } = renderHook(() => usePhotoPicker(jest.fn()))
 
       await act(async () => {
         await result.current.sheetProps.onChooseFromGallery()
       })
 
-      expect(onPhotoSelected).not.toHaveBeenCalled()
       expect(mockLaunchImageLibraryAsync).not.toHaveBeenCalled()
     })
 
@@ -165,19 +262,6 @@ describe('usePhotoPicker', () => {
       })
 
       expect(result.current.permissionBlocked).toBe(true)
-    })
-
-    it('closes the sheet before launching the gallery picker', async () => {
-      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
-      mockLaunchImageLibraryAsync.mockResolvedValue({ canceled: true, assets: null })
-      const { result } = renderHook(() => usePhotoPicker(jest.fn()))
-
-      act(() => result.current.openSheet())
-      await act(async () => {
-        await result.current.sheetProps.onChooseFromGallery()
-      })
-
-      expect(result.current.sheetVisible).toBe(false)
     })
   })
 })
