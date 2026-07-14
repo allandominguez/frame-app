@@ -1,5 +1,6 @@
 import { launchCameraAsync, launchImageLibraryAsync } from 'expo-image-picker'
 import { useState } from 'react'
+import { getDeviceLocation } from '../../../lib/location/deviceLocation'
 import { extractGpsFromExif, GpsCoordinates } from '../../../lib/location/exifGps'
 import { savePhoto } from '../../../lib/storage/photoStorage'
 import { CaptureResult } from '../types'
@@ -38,7 +39,8 @@ export function usePhotoPicker(
     setIsSaving(true)
     try {
       const localPath = await savePhoto(uri)
-      onCaptureComplete({ localPath, exifGps })
+      const deviceGps = exifGps ? null : await getDeviceLocation()
+      onCaptureComplete({ localPath, exifGps, deviceGps })
     } finally {
       setIsSaving(false)
     }

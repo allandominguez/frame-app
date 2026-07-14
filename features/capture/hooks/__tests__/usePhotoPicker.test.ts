@@ -7,6 +7,7 @@ const mockLaunchCameraAsync = jest.fn()
 const mockLaunchImageLibraryAsync = jest.fn()
 const mockSavePhoto = jest.fn()
 const mockExtractGpsFromExif = jest.fn()
+const mockGetDeviceLocation = jest.fn()
 
 jest.mock('../useCapturePermissions', () => ({
   useCapturePermissions: () => ({
@@ -28,6 +29,10 @@ jest.mock('../../../../lib/storage/photoStorage', () => ({
 
 jest.mock('../../../../lib/location/exifGps', () => ({
   extractGpsFromExif: (...args: unknown[]) => mockExtractGpsFromExif(...args),
+}))
+
+jest.mock('../../../../lib/location/deviceLocation', () => ({
+  getDeviceLocation: () => mockGetDeviceLocation(),
 }))
 
 const GPS = { latitude: 37.7749, longitude: -122.4194 }
@@ -59,7 +64,7 @@ describe('usePhotoPicker', () => {
   })
 
   describe('Take photo', () => {
-    it('saves the photo and calls onCaptureComplete with localPath and exifGps', async () => {
+    it('uses exifGps and skips device location when EXIF has GPS', async () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({
         canceled: false,
@@ -74,20 +79,22 @@ describe('usePhotoPicker', () => {
         await result.current.sheetProps.onTakePhoto()
       })
 
-      expect(mockSavePhoto).toHaveBeenCalledWith('file://camera-temp.jpg')
       expect(onCaptureComplete).toHaveBeenCalledWith({
         localPath: 'file://documents/photos/123.jpg',
         exifGps: GPS,
+        deviceGps: null,
       })
+      expect(mockGetDeviceLocation).not.toHaveBeenCalled()
     })
 
-    it('passes null exifGps when the photo has no EXIF data', async () => {
+    it('falls back to device location when the photo has no EXIF GPS', async () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({
         canceled: false,
         assets: [{ uri: 'file://camera-temp.jpg', exif: undefined }],
       })
       mockSavePhoto.mockResolvedValue('file://documents/photos/123.jpg')
+      mockGetDeviceLocation.mockResolvedValue(GPS)
       const onCaptureComplete = jest.fn()
       const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
 
@@ -98,8 +105,30 @@ describe('usePhotoPicker', () => {
       expect(onCaptureComplete).toHaveBeenCalledWith({
         localPath: 'file://documents/photos/123.jpg',
         exifGps: null,
+        deviceGps: GPS,
       })
-      expect(mockExtractGpsFromExif).not.toHaveBeenCalled()
+    })
+
+    it('passes null deviceGps when device location is unavailable and there is no EXIF GPS', async () => {
+      mockRequestCameraPermission.mockResolvedValue('granted')
+      mockLaunchCameraAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'file://camera-temp.jpg', exif: undefined }],
+      })
+      mockSavePhoto.mockResolvedValue('file://documents/photos/123.jpg')
+      mockGetDeviceLocation.mockResolvedValue(null)
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
+
+      await act(async () => {
+        await result.current.sheetProps.onTakePhoto()
+      })
+
+      expect(onCaptureComplete).toHaveBeenCalledWith({
+        localPath: 'file://documents/photos/123.jpg',
+        exifGps: null,
+        deviceGps: null,
+      })
     })
 
     it('does not save or call onCaptureComplete when the user cancels the camera', async () => {
@@ -213,6 +242,7 @@ describe('usePhotoPicker', () => {
       expect(onCaptureComplete).toHaveBeenCalledWith({
         localPath: 'file://documents/photos/456.jpg',
         exifGps: GPS,
+        deviceGps: null,
       })
       expect(result.current.pendingUri).toBeNull()
     })
