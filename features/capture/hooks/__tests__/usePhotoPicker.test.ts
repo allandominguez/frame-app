@@ -8,6 +8,7 @@ const mockLaunchImageLibraryAsync = jest.fn()
 const mockSavePhoto = jest.fn()
 const mockExtractGpsFromExif = jest.fn()
 const mockGetDeviceLocation = jest.fn()
+const mockReverseGeocode = jest.fn()
 
 jest.mock('../useCapturePermissions', () => ({
   useCapturePermissions: () => ({
@@ -35,10 +36,17 @@ jest.mock('../../../../lib/location/deviceLocation', () => ({
   getDeviceLocation: () => mockGetDeviceLocation(),
 }))
 
+jest.mock('../../../../lib/location/reverseGeocode', () => ({
+  reverseGeocode: (...args: unknown[]) => mockReverseGeocode(...args),
+}))
+
 const GPS = { latitude: 37.7749, longitude: -122.4194 }
 
 describe('usePhotoPicker', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockReverseGeocode.mockResolvedValue(null)
+  })
 
   it('sheet is hidden and no pending photo initially', () => {
     const { result } = renderHook(() => usePhotoPicker(jest.fn()))
@@ -83,8 +91,32 @@ describe('usePhotoPicker', () => {
         localPath: 'file://documents/photos/123.jpg',
         exifGps: GPS,
         deviceGps: null,
+        locationName: null,
+        locationSource: 'exif',
       })
       expect(mockGetDeviceLocation).not.toHaveBeenCalled()
+    })
+
+    it('reverse geocodes the available coordinates and includes the location name in the result', async () => {
+      mockRequestCameraPermission.mockResolvedValue('granted')
+      mockLaunchCameraAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'file://camera-temp.jpg', exif: { '{GPS}': GPS } }],
+      })
+      mockExtractGpsFromExif.mockReturnValue(GPS)
+      mockSavePhoto.mockResolvedValue('file://documents/photos/123.jpg')
+      mockReverseGeocode.mockResolvedValue('Mission District')
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
+
+      await act(async () => {
+        await result.current.sheetProps.onTakePhoto()
+      })
+
+      expect(mockReverseGeocode).toHaveBeenCalledWith(GPS)
+      expect(onCaptureComplete).toHaveBeenCalledWith(
+        expect.objectContaining({ locationName: 'Mission District', locationSource: 'exif' }),
+      )
     })
 
     it('falls back to device location when the photo has no EXIF GPS', async () => {
@@ -106,6 +138,8 @@ describe('usePhotoPicker', () => {
         localPath: 'file://documents/photos/123.jpg',
         exifGps: null,
         deviceGps: GPS,
+        locationName: null,
+        locationSource: 'device',
       })
     })
 
@@ -128,6 +162,8 @@ describe('usePhotoPicker', () => {
         localPath: 'file://documents/photos/123.jpg',
         exifGps: null,
         deviceGps: null,
+        locationName: null,
+        locationSource: null,
       })
     })
 
@@ -243,6 +279,8 @@ describe('usePhotoPicker', () => {
         localPath: 'file://documents/photos/456.jpg',
         exifGps: GPS,
         deviceGps: null,
+        locationName: null,
+        locationSource: 'exif',
       })
       expect(result.current.pendingUri).toBeNull()
     })
