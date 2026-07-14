@@ -6,6 +6,7 @@ const mockRequestMediaLibraryPermission = jest.fn()
 const mockLaunchCameraAsync = jest.fn()
 const mockLaunchImageLibraryAsync = jest.fn()
 const mockSavePhoto = jest.fn()
+const mockExtractGpsFromExif = jest.fn()
 
 jest.mock('../useCapturePermissions', () => ({
   useCapturePermissions: () => ({
@@ -24,6 +25,12 @@ jest.mock('expo-image-picker', () => ({
 jest.mock('../../../../lib/storage/photoStorage', () => ({
   savePhoto: (...args: unknown[]) => mockSavePhoto(...args),
 }))
+
+jest.mock('../../../../lib/location/exifGps', () => ({
+  extractGpsFromExif: (...args: unknown[]) => mockExtractGpsFromExif(...args),
+}))
+
+const GPS = { latitude: 37.7749, longitude: -122.4194 }
 
 describe('usePhotoPicker', () => {
   beforeEach(() => jest.clearAllMocks())
@@ -52,36 +59,61 @@ describe('usePhotoPicker', () => {
   })
 
   describe('Take photo', () => {
-    it('saves the photo and calls onPhotoSelected with the local path', async () => {
+    it('saves the photo and calls onCaptureComplete with localPath and exifGps', async () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({
         canceled: false,
-        assets: [{ uri: 'file://camera-temp.jpg' }],
+        assets: [{ uri: 'file://camera-temp.jpg', exif: { '{GPS}': GPS } }],
       })
+      mockExtractGpsFromExif.mockReturnValue(GPS)
       mockSavePhoto.mockResolvedValue('file://documents/photos/123.jpg')
-      const onPhotoSelected = jest.fn()
-      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
 
       await act(async () => {
         await result.current.sheetProps.onTakePhoto()
       })
 
       expect(mockSavePhoto).toHaveBeenCalledWith('file://camera-temp.jpg')
-      expect(onPhotoSelected).toHaveBeenCalledWith('file://documents/photos/123.jpg')
+      expect(onCaptureComplete).toHaveBeenCalledWith({
+        localPath: 'file://documents/photos/123.jpg',
+        exifGps: GPS,
+      })
     })
 
-    it('does not save or call onPhotoSelected when the user cancels the camera', async () => {
+    it('passes null exifGps when the photo has no EXIF data', async () => {
+      mockRequestCameraPermission.mockResolvedValue('granted')
+      mockLaunchCameraAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'file://camera-temp.jpg', exif: undefined }],
+      })
+      mockSavePhoto.mockResolvedValue('file://documents/photos/123.jpg')
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
+
+      await act(async () => {
+        await result.current.sheetProps.onTakePhoto()
+      })
+
+      expect(onCaptureComplete).toHaveBeenCalledWith({
+        localPath: 'file://documents/photos/123.jpg',
+        exifGps: null,
+      })
+      expect(mockExtractGpsFromExif).not.toHaveBeenCalled()
+    })
+
+    it('does not save or call onCaptureComplete when the user cancels the camera', async () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({ canceled: true, assets: null })
-      const onPhotoSelected = jest.fn()
-      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
 
       await act(async () => {
         await result.current.sheetProps.onTakePhoto()
       })
 
       expect(mockSavePhoto).not.toHaveBeenCalled()
-      expect(onPhotoSelected).not.toHaveBeenCalled()
+      expect(onCaptureComplete).not.toHaveBeenCalled()
     })
 
     it('does not launch the camera when permission is denied', async () => {
@@ -123,7 +155,7 @@ describe('usePhotoPicker', () => {
       mockRequestCameraPermission.mockResolvedValue('granted')
       mockLaunchCameraAsync.mockResolvedValue({
         canceled: false,
-        assets: [{ uri: 'file://camera-temp.jpg' }],
+        assets: [{ uri: 'file://camera-temp.jpg', exif: undefined }],
       })
       let resolveSave!: (path: string) => void
       mockSavePhoto.mockReturnValue(new Promise<string>((res) => (resolveSave = res)))
@@ -147,7 +179,7 @@ describe('usePhotoPicker', () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('granted')
       mockLaunchImageLibraryAsync.mockResolvedValue({
         canceled: false,
-        assets: [{ uri: 'content://gallery/photo.jpg' }],
+        assets: [{ uri: 'content://gallery/photo.jpg', exif: undefined }],
       })
       const { result } = renderHook(() => usePhotoPicker(jest.fn()))
 
@@ -159,15 +191,16 @@ describe('usePhotoPicker', () => {
       expect(mockSavePhoto).not.toHaveBeenCalled()
     })
 
-    it('saves and calls onPhotoSelected when the user confirms the preview', async () => {
+    it('saves with exifGps and calls onCaptureComplete when the user confirms the preview', async () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('granted')
       mockLaunchImageLibraryAsync.mockResolvedValue({
         canceled: false,
-        assets: [{ uri: 'content://gallery/photo.jpg' }],
+        assets: [{ uri: 'content://gallery/photo.jpg', exif: { '{GPS}': GPS } }],
       })
+      mockExtractGpsFromExif.mockReturnValue(GPS)
       mockSavePhoto.mockResolvedValue('file://documents/photos/456.jpg')
-      const onPhotoSelected = jest.fn()
-      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
 
       await act(async () => {
         await result.current.sheetProps.onChooseFromGallery()
@@ -177,20 +210,23 @@ describe('usePhotoPicker', () => {
       })
 
       expect(mockSavePhoto).toHaveBeenCalledWith('content://gallery/photo.jpg')
-      expect(onPhotoSelected).toHaveBeenCalledWith('file://documents/photos/456.jpg')
+      expect(onCaptureComplete).toHaveBeenCalledWith({
+        localPath: 'file://documents/photos/456.jpg',
+        exifGps: GPS,
+      })
       expect(result.current.pendingUri).toBeNull()
     })
 
-    it('re-opens the gallery when the user cancels the preview', async () => {
+    it('re-opens the gallery when the user taps Back on the preview', async () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('granted')
       mockLaunchImageLibraryAsync
         .mockResolvedValueOnce({
           canceled: false,
-          assets: [{ uri: 'content://gallery/first.jpg' }],
+          assets: [{ uri: 'content://gallery/first.jpg', exif: undefined }],
         })
         .mockResolvedValueOnce({
           canceled: false,
-          assets: [{ uri: 'content://gallery/second.jpg' }],
+          assets: [{ uri: 'content://gallery/second.jpg', exif: undefined }],
         })
       const { result } = renderHook(() => usePhotoPicker(jest.fn()))
 
@@ -205,30 +241,6 @@ describe('usePhotoPicker', () => {
       expect(result.current.pendingUri).toBe('content://gallery/second.jpg')
     })
 
-    it('re-opens the sheet when the user closes the re-opened gallery without selecting a photo', async () => {
-      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
-      mockLaunchImageLibraryAsync
-        .mockResolvedValueOnce({
-          canceled: false,
-          assets: [{ uri: 'content://gallery/photo.jpg' }],
-        })
-        .mockResolvedValueOnce({ canceled: true, assets: null })
-      const onPhotoSelected = jest.fn()
-      const { result } = renderHook(() => usePhotoPicker(onPhotoSelected))
-
-      await act(async () => {
-        await result.current.sheetProps.onChooseFromGallery()
-      })
-      await act(async () => {
-        await result.current.onCancelPreview()
-      })
-
-      expect(result.current.pendingUri).toBeNull()
-      expect(result.current.sheetVisible).toBe(true)
-      expect(mockSavePhoto).not.toHaveBeenCalled()
-      expect(onPhotoSelected).not.toHaveBeenCalled()
-    })
-
     it('re-opens the sheet when the user closes the gallery without selecting a photo', async () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('granted')
       mockLaunchImageLibraryAsync.mockResolvedValue({ canceled: true, assets: null })
@@ -240,6 +252,30 @@ describe('usePhotoPicker', () => {
 
       expect(result.current.pendingUri).toBeNull()
       expect(result.current.sheetVisible).toBe(true)
+    })
+
+    it('re-opens the sheet when the user closes the re-opened gallery without selecting a photo', async () => {
+      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
+      mockLaunchImageLibraryAsync
+        .mockResolvedValueOnce({
+          canceled: false,
+          assets: [{ uri: 'content://gallery/photo.jpg', exif: undefined }],
+        })
+        .mockResolvedValueOnce({ canceled: true, assets: null })
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
+
+      await act(async () => {
+        await result.current.sheetProps.onChooseFromGallery()
+      })
+      await act(async () => {
+        await result.current.onCancelPreview()
+      })
+
+      expect(result.current.pendingUri).toBeNull()
+      expect(result.current.sheetVisible).toBe(true)
+      expect(mockSavePhoto).not.toHaveBeenCalled()
+      expect(onCaptureComplete).not.toHaveBeenCalled()
     })
 
     it('does not launch the gallery when permission is denied', async () => {

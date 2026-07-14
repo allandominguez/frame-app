@@ -1,6 +1,8 @@
 import { launchCameraAsync, launchImageLibraryAsync } from 'expo-image-picker'
 import { useState } from 'react'
+import { extractGpsFromExif, GpsCoordinates } from '../../../lib/location/exifGps'
 import { savePhoto } from '../../../lib/storage/photoStorage'
+import { CaptureResult } from '../types'
 import { useCapturePermissions } from './useCapturePermissions'
 
 type UsePhotoPickerResult = {
@@ -19,21 +21,24 @@ type UsePhotoPickerResult = {
   }
 }
 
-export function usePhotoPicker(onPhotoSelected: (localPath: string) => void): UsePhotoPickerResult {
+export function usePhotoPicker(
+  onCaptureComplete: (result: CaptureResult) => void,
+): UsePhotoPickerResult {
   const [sheetVisible, setSheetVisible] = useState(false)
   const [permissionBlocked, setPermissionBlocked] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [pendingUri, setPendingUri] = useState<string | null>(null)
+  const [pendingExifGps, setPendingExifGps] = useState<GpsCoordinates | null>(null)
   const { requestCameraPermission, requestMediaLibraryPermission } = useCapturePermissions()
 
   const openSheet = () => setSheetVisible(true)
   const closeSheet = () => setSheetVisible(false)
 
-  const saveAndNotify = async (uri: string) => {
+  const saveAndNotify = async (uri: string, exifGps: GpsCoordinates | null) => {
     setIsSaving(true)
     try {
       const localPath = await savePhoto(uri)
-      onPhotoSelected(localPath)
+      onCaptureComplete({ localPath, exifGps })
     } finally {
       setIsSaving(false)
     }
@@ -48,11 +53,13 @@ export function usePhotoPicker(onPhotoSelected: (localPath: string) => void): Us
     }
     if (status === 'denied') return
 
-    const result = await launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
+    const result = await launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: true })
     if (result.canceled) {
       openSheet()
     } else {
-      await saveAndNotify(result.assets[0].uri)
+      const asset = result.assets[0]
+      const exifGps = asset.exif ? extractGpsFromExif(asset.exif) : null
+      await saveAndNotify(asset.uri, exifGps)
     }
   }
 
@@ -61,11 +68,14 @@ export function usePhotoPicker(onPhotoSelected: (localPath: string) => void): Us
       mediaTypes: ['images'],
       quality: 1,
       allowsMultipleSelection: false,
+      exif: true,
     })
     if (result.canceled) {
       openSheet()
     } else {
-      setPendingUri(result.assets[0].uri)
+      const asset = result.assets[0]
+      setPendingUri(asset.uri)
+      setPendingExifGps(asset.exif ? extractGpsFromExif(asset.exif) : null)
     }
   }
 
@@ -84,12 +94,15 @@ export function usePhotoPicker(onPhotoSelected: (localPath: string) => void): Us
   const onConfirmPhoto = async () => {
     if (!pendingUri) return
     const uri = pendingUri
+    const exifGps = pendingExifGps
     setPendingUri(null)
-    await saveAndNotify(uri)
+    setPendingExifGps(null)
+    await saveAndNotify(uri, exifGps)
   }
 
   const onCancelPreview = async () => {
     setPendingUri(null)
+    setPendingExifGps(null)
     await openGallery()
   }
 
