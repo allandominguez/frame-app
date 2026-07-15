@@ -1,9 +1,12 @@
 import { act, renderHook } from '@testing-library/react-native'
+import { Alert, AlertButton } from 'react-native'
 import { CaptureResult } from '../../types'
 import { useCapture } from '../useCapture'
 
 let capturedOnComplete: ((result: CaptureResult) => void) | null = null
+const mockGetDay = jest.fn()
 const mockUpsertDay = jest.fn()
+const mockDeletePhoto = jest.fn()
 
 jest.mock('../usePhotoPicker', () => ({
   usePhotoPicker: (onCaptureComplete: (result: CaptureResult) => void) => {
@@ -27,10 +30,30 @@ jest.mock('../usePhotoPicker', () => ({
 }))
 
 jest.mock('../../../../lib/repositories/day', () => ({
+  getDay: (...args: unknown[]) => mockGetDay(...args),
   upsertDay: (...args: unknown[]) => mockUpsertDay(...args),
 }))
 
+jest.mock('../../../../lib/storage/photoStorage', () => ({
+  deletePhoto: (...args: unknown[]) => mockDeletePhoto(...args),
+}))
+
 const GPS = { latitude: 37.7749, longitude: -122.4194 }
+
+const RESULT: CaptureResult = {
+  localPath: 'file://documents/photos/new.jpg',
+  exifGps: GPS,
+  deviceGps: null,
+  locationName: 'Mission District',
+  locationSource: 'exif',
+}
+
+function simulateAlert(choice: 'Cancel' | 'Replace') {
+  jest.spyOn(Alert, 'alert').mockImplementationOnce((_title, _message, buttons) => {
+    const btn = (buttons as AlertButton[]).find((b) => b.text === choice)
+    btn?.onPress?.()
+  })
+}
 
 describe('useCapture', () => {
   beforeEach(() => {
@@ -38,6 +61,7 @@ describe('useCapture', () => {
     capturedOnComplete = null
     jest.useFakeTimers()
     jest.setSystemTime(new Date('2026-06-15'))
+    mockGetDay.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -48,18 +72,12 @@ describe('useCapture', () => {
     renderHook(() => useCapture())
 
     await act(async () => {
-      capturedOnComplete!({
-        localPath: 'file://documents/photos/123.jpg',
-        exifGps: GPS,
-        deviceGps: null,
-        locationName: 'Mission District',
-        locationSource: 'exif',
-      })
+      capturedOnComplete!(RESULT)
     })
 
     expect(mockUpsertDay).toHaveBeenCalledWith({
       date: '2026-06-15',
-      photo_path: 'file://documents/photos/123.jpg',
+      photo_path: 'file://documents/photos/new.jpg',
       note_text: null,
       latitude: 37.7749,
       longitude: -122.4194,
@@ -75,7 +93,7 @@ describe('useCapture', () => {
 
     await act(async () => {
       capturedOnComplete!({
-        localPath: 'file://documents/photos/456.jpg',
+        localPath: 'file://documents/photos/new.jpg',
         exifGps: null,
         deviceGps: GPS,
         locationName: 'San Francisco',
@@ -88,7 +106,6 @@ describe('useCapture', () => {
         latitude: 37.7749,
         longitude: -122.4194,
         location_source: 'device',
-        location_name: 'San Francisco',
       }),
     )
   })
@@ -98,7 +115,7 @@ describe('useCapture', () => {
 
     await act(async () => {
       capturedOnComplete!({
-        localPath: 'file://documents/photos/789.jpg',
+        localPath: 'file://documents/photos/new.jpg',
         exifGps: null,
         deviceGps: null,
         locationName: null,
@@ -107,12 +124,68 @@ describe('useCapture', () => {
     })
 
     expect(mockUpsertDay).toHaveBeenCalledWith(
-      expect.objectContaining({
-        latitude: null,
-        longitude: null,
-        location_name: null,
-        location_source: null,
-      }),
+      expect.objectContaining({ latitude: null, longitude: null, location_source: null }),
     )
+  })
+
+  describe('one-photo-per-day replacement', () => {
+    it('does not show a confirmation prompt when today has no existing photo', async () => {
+      mockGetDay.mockResolvedValue(null)
+      const alertSpy = jest.spyOn(Alert, 'alert')
+      renderHook(() => useCapture())
+
+      await act(async () => {
+        capturedOnComplete!(RESULT)
+      })
+
+      expect(alertSpy).not.toHaveBeenCalled()
+      expect(mockUpsertDay).toHaveBeenCalled()
+    })
+
+    it('prompts for confirmation when today already has a photo', async () => {
+      mockGetDay.mockResolvedValue({ photo_path: 'file://documents/photos/old.jpg' })
+      simulateAlert('Cancel')
+      const alertSpy = jest.spyOn(Alert, 'alert')
+      renderHook(() => useCapture())
+
+      await act(async () => {
+        capturedOnComplete!(RESULT)
+      })
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        "Replace today's photo?",
+        'Your current photo will be permanently deleted.',
+        expect.any(Array),
+      )
+    })
+
+    it('deletes the old photo and saves the new one when the user confirms', async () => {
+      mockGetDay.mockResolvedValue({ photo_path: 'file://documents/photos/old.jpg' })
+      simulateAlert('Replace')
+      renderHook(() => useCapture())
+
+      await act(async () => {
+        capturedOnComplete!(RESULT)
+      })
+
+      expect(mockDeletePhoto).toHaveBeenCalledWith('file://documents/photos/old.jpg')
+      expect(mockUpsertDay).toHaveBeenCalledWith(
+        expect.objectContaining({ photo_path: 'file://documents/photos/new.jpg' }),
+      )
+    })
+
+    it('deletes the new photo and aborts when the user cancels', async () => {
+      mockGetDay.mockResolvedValue({ photo_path: 'file://documents/photos/old.jpg' })
+      simulateAlert('Cancel')
+      renderHook(() => useCapture())
+
+      await act(async () => {
+        capturedOnComplete!(RESULT)
+      })
+
+      expect(mockDeletePhoto).toHaveBeenCalledWith('file://documents/photos/new.jpg')
+      expect(mockDeletePhoto).not.toHaveBeenCalledWith('file://documents/photos/old.jpg')
+      expect(mockUpsertDay).not.toHaveBeenCalled()
+    })
   })
 })
