@@ -24,7 +24,7 @@ type UsePhotoPickerResult = {
 }
 
 export function usePhotoPicker(
-  onCaptureComplete: (result: CaptureResult) => void,
+  onCaptureComplete: (result: CaptureResult) => void | Promise<void>,
 ): UsePhotoPickerResult {
   const [sheetVisible, setSheetVisible] = useState(false)
   const [permissionBlocked, setPermissionBlocked] = useState(false)
@@ -44,13 +44,12 @@ export function usePhotoPicker(
     setIsSaving(true)
     try {
       const localPath = await savePhoto(uri)
-      // Gallery picks on Android always return zeroed GPS via MediaStore — don't fall back
-      // to device location as it would store the user's current position, not the photo's
+      // Android MediaStore strips gallery GPS — device fallback would record current position, not the photo's
       const deviceGps = source === 'camera' && !exifGps ? await getDeviceLocation() : null
       const coords = exifGps ?? deviceGps
       const locationName = coords ? await reverseGeocode(coords) : null
       const locationSource = exifGps ? 'exif' : deviceGps ? 'device' : null
-      onCaptureComplete({ localPath, exifGps, deviceGps, locationName, locationSource })
+      await onCaptureComplete({ localPath, exifGps, deviceGps, locationName, locationSource })
     } finally {
       setIsSaving(false)
     }
