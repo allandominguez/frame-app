@@ -62,5 +62,10 @@
   "jest": {
     "preset": "jest-expo"
   },
+  "overrides": {
+    "undici": ">=6.27.0",
+    "js-yaml": ">=3.15.0",
+    "form-data": ">=4.0.6"
+  },
   "private": true
 }
