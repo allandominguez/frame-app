@@ -1,39 +1,65 @@
 import { StatusBar } from 'expo-status-bar'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { PhotoPickerSheet } from './features/capture/components/PhotoPickerSheet'
+import { PhotoPreview } from './features/capture/components/PhotoPreview'
+import { useCapture } from './features/capture/hooks/useCapture'
 import { Colors, Spacing, Typography, useAppFonts } from './lib/design'
+import { DayEntry, getDay } from './lib/repositories/day'
 
 export default function App() {
   const [fontsLoaded] = useAppFonts()
+  const [todayEntry, setTodayEntry] = useState<DayEntry | null>(null)
+  const { openSheet, sheetProps, pendingUri, isSaving, onConfirmPhoto, onCancelPreview } =
+    useCapture()
+
+  useEffect(() => {
+    if (isSaving) return
+    const today = new Date().toISOString().slice(0, 10)
+    getDay(today).then(setTodayEntry)
+  }, [isSaving])
 
   if (!fontsLoaded) {
     return null
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <Text style={[Typography.displayXl, styles.primary]}>1 Sun</Text>
-      <Text style={[Typography.displayMd, styles.primary]}>June 2026</Text>
-      <Text style={[Typography.bodyLg, styles.primary]}>
-        A quiet moment by the window. The light came in soft and low.
-      </Text>
-      <Text style={[Typography.labelMd, styles.secondary]}>Melbourne, VIC</Text>
-      <Text style={[Typography.labelSm, styles.primary]}>9</Text>
-      <Text style={[Typography.labelSmMedium, styles.primary]}>9 (today)</Text>
-      <Text style={[Typography.labelXs, styles.tertiary]}>frame — design tokens</Text>
+    <View style={styles.root}>
+      {todayEntry?.photo_path ? (
+        <Image
+          source={{ uri: todayEntry.photo_path }}
+          style={styles.photo}
+          resizeMode="cover"
+          accessibilityLabel="Today's photo"
+          accessibilityRole="image"
+        />
+      ) : (
+        <View style={styles.placeholder}>
+          <Text style={styles.placeholderText}>No photo yet today</Text>
+        </View>
+      )}
 
-      <View style={styles.swatches}>
-        {Object.entries(Colors).map(([name, value]) => (
-          <View key={name} style={styles.swatchRow}>
-            <View style={[styles.swatch, { backgroundColor: value }]} />
-            <Text style={[Typography.labelXs, styles.tertiary]}>
-              {name} {value}
-            </Text>
-          </View>
-        ))}
+      <View style={styles.footer}>
+        <Pressable
+          style={styles.button}
+          onPress={openSheet}
+          accessibilityRole="button"
+          accessibilityLabel="Capture photo"
+        >
+          <Text style={styles.buttonText}>Capture photo</Text>
+        </Pressable>
       </View>
 
+      <PhotoPickerSheet {...sheetProps} />
+      <PhotoPreview
+        uri={pendingUri}
+        isSaving={isSaving}
+        onConfirm={onConfirmPhoto}
+        onCancel={onCancelPreview}
+      />
+
       <StatusBar style="auto" />
-    </ScrollView>
+    </View>
   )
 }
 
@@ -42,33 +68,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  content: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+  photo: {
+    flex: 1,
   },
-  primary: {
-    color: Colors.textPrimary,
+  placeholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  secondary: {
-    color: Colors.textSecondary,
-  },
-  tertiary: {
+  placeholderText: {
+    ...Typography.bodyLg,
     color: Colors.textTertiary,
   },
-  swatches: {
-    marginTop: Spacing.xl,
-    gap: Spacing.xs,
+  footer: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
-  swatchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  swatch: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
+  button: {
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
+    borderRadius: 8,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+  },
+  buttonText: {
+    ...Typography.labelMd,
+    color: Colors.textPrimary,
   },
 })

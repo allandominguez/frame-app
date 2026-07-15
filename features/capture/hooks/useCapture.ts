@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Alert } from 'react-native'
 import { getDay, upsertDay } from '../../../lib/repositories/day'
 import { deletePhoto } from '../../../lib/storage/photoStorage'
@@ -14,22 +15,17 @@ function confirmReplacement(): Promise<boolean> {
 }
 
 export function useCapture() {
-  const onCaptureComplete = async (result: CaptureResult) => {
-    const today = new Date().toISOString().slice(0, 10)
-    const existing = await getDay(today)
+  const [existingPhotoPath, setExistingPhotoPath] = useState<string | null>(null)
 
-    if (existing?.photo_path) {
-      const confirmed = await confirmReplacement()
-      if (!confirmed) {
-        deletePhoto(result.localPath)
-        return
-      }
-      deletePhoto(existing.photo_path)
+  const onCaptureComplete = async (result: CaptureResult) => {
+    if (existingPhotoPath) {
+      deletePhoto(existingPhotoPath)
+      setExistingPhotoPath(null)
     }
 
     const coords = result.exifGps ?? result.deviceGps
     await upsertDay({
-      date: today,
+      date: new Date().toISOString().slice(0, 10),
       photo_path: result.localPath,
       note_text: null,
       latitude: coords?.latitude ?? null,
@@ -41,5 +37,26 @@ export function useCapture() {
     })
   }
 
-  return usePhotoPicker(onCaptureComplete)
+  const pickerResult = usePhotoPicker(onCaptureComplete)
+
+  const openSheet = async () => {
+    // Already confirmed replacement in this session — open directly without re-prompting
+    if (existingPhotoPath !== null) {
+      pickerResult.openSheet()
+      return
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const existing = await getDay(today)
+
+    if (existing?.photo_path) {
+      const confirmed = await confirmReplacement()
+      if (!confirmed) return
+      setExistingPhotoPath(existing.photo_path)
+    }
+
+    pickerResult.openSheet()
+  }
+
+  return { ...pickerResult, openSheet }
 }
