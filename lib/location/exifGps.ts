@@ -8,14 +8,17 @@ export function extractGpsFromExif(exif: Record<string, unknown>): GpsCoordinate
   const gps = (exif['{GPS}'] as Record<string, unknown> | undefined) ?? exif
 
   const lat = gps['Latitude'] ?? gps['GPSLatitude']
-  const latRef = gps['LatitudeRef'] ?? gps['GPSLatitudeRef']
+  const latRef = (gps['LatitudeRef'] ?? gps['GPSLatitudeRef']) as string | undefined
   const lng = gps['Longitude'] ?? gps['GPSLongitude']
-  const lngRef = gps['LongitudeRef'] ?? gps['GPSLongitudeRef']
+  const lngRef = (gps['LongitudeRef'] ?? gps['GPSLongitudeRef']) as string | undefined
 
   if (lat == null || lng == null) return null
 
-  const latitude = toDecimalDegrees(lat, latRef as string | undefined)
-  const longitude = toDecimalDegrees(lng, lngRef as string | undefined)
+  // Empty ref strings mean the device wrote GPS fields but had no fix (seen on Android)
+  if (latRef === '' || lngRef === '') return null
+
+  const latitude = toDecimalDegrees(lat, latRef)
+  const longitude = toDecimalDegrees(lng, lngRef)
 
   if (latitude == null || longitude == null) return null
 

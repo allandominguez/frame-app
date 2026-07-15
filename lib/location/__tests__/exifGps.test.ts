@@ -66,5 +66,10 @@ describe('extractGpsFromExif', () => {
       const exif = { '{GPS}': { Latitude: 'invalid', Longitude: 122.4194 } }
       expect(extractGpsFromExif(exif)).toBeNull()
     })
+
+    it('returns null when ref strings are empty (Android no-fix placeholder)', () => {
+      const exif = { GPSLatitude: 0, GPSLatitudeRef: '', GPSLongitude: 0, GPSLongitudeRef: '' }
+      expect(extractGpsFromExif(exif)).toBeNull()
+    })
   })
 })

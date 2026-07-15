@@ -36,11 +36,17 @@ export function usePhotoPicker(
   const openSheet = () => setSheetVisible(true)
   const closeSheet = () => setSheetVisible(false)
 
-  const saveAndNotify = async (uri: string, exifGps: GpsCoordinates | null) => {
+  const saveAndNotify = async (
+    uri: string,
+    exifGps: GpsCoordinates | null,
+    source: 'camera' | 'gallery',
+  ) => {
     setIsSaving(true)
     try {
       const localPath = await savePhoto(uri)
-      const deviceGps = exifGps ? null : await getDeviceLocation()
+      // Gallery picks on Android always return zeroed GPS via MediaStore — don't fall back
+      // to device location as it would store the user's current position, not the photo's
+      const deviceGps = source === 'camera' && !exifGps ? await getDeviceLocation() : null
       const coords = exifGps ?? deviceGps
       const locationName = coords ? await reverseGeocode(coords) : null
       const locationSource = exifGps ? 'exif' : deviceGps ? 'device' : null
@@ -65,7 +71,7 @@ export function usePhotoPicker(
     } else {
       const asset = result.assets[0]
       const exifGps = asset.exif ? extractGpsFromExif(asset.exif) : null
-      await saveAndNotify(asset.uri, exifGps)
+      await saveAndNotify(asset.uri, exifGps, 'camera')
     }
   }
 
@@ -103,7 +109,7 @@ export function usePhotoPicker(
     const exifGps = pendingExifGps
     setPendingUri(null)
     setPendingExifGps(null)
-    await saveAndNotify(uri, exifGps)
+    await saveAndNotify(uri, exifGps, 'gallery')
   }
 
   const onCancelPreview = async () => {

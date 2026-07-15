@@ -346,6 +346,29 @@ describe('usePhotoPicker', () => {
       expect(onCaptureComplete).not.toHaveBeenCalled()
     })
 
+    it('stores null location without calling device GPS when the gallery photo has no EXIF GPS', async () => {
+      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
+      mockLaunchImageLibraryAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'content://gallery/photo.jpg', exif: undefined }],
+      })
+      mockSavePhoto.mockResolvedValue('file://documents/photos/456.jpg')
+      const onCaptureComplete = jest.fn()
+      const { result } = renderHook(() => usePhotoPicker(onCaptureComplete))
+
+      await act(async () => {
+        await result.current.sheetProps.onChooseFromGallery()
+      })
+      await act(async () => {
+        await result.current.onConfirmPhoto()
+      })
+
+      expect(mockGetDeviceLocation).not.toHaveBeenCalled()
+      expect(onCaptureComplete).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceGps: null, locationName: null, locationSource: null }),
+      )
+    })
+
     it('does not launch the gallery when permission is denied', async () => {
       mockRequestMediaLibraryPermission.mockResolvedValue('denied')
       const { result } = renderHook(() => usePhotoPicker(jest.fn()))
