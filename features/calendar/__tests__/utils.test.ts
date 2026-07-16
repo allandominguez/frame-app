@@ -61,6 +61,13 @@ describe('buildMonthCells', () => {
     expect(day10?.accentColor).toBe('#4A90E2')
   })
 
+  it('marks days after today as future and days on or before today as not future', () => {
+    const cells = buildMonthCells(2026, 7, noEntries, '2026-07-16')
+    expect(cells.find((c) => c.date === '2026-07-17')?.isFuture).toBe(true)
+    expect(cells.find((c) => c.date === '2026-07-16')?.isFuture).toBe(false)
+    expect(cells.find((c) => c.date === '2026-07-15')?.isFuture).toBe(false)
+  })
+
   it('marks days without entries as having no photo', () => {
     const cells = buildMonthCells(2026, 7, noEntries, '2026-07-16')
     const day11 = cells.find((c) => c.date === '2026-07-11')

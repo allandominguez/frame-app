@@ -46,10 +46,23 @@ export function useCalendarData(): CalendarData {
   )
 
   const months = useMemo(() => {
-    // getAllDays returns DESC; last entry is the oldest
-    const earliestDate = entries.length > 0 ? entries[entries.length - 1].date : today
-    const startYear = parseInt(earliestDate.slice(0, 4), 10)
-    const startMonth = parseInt(earliestDate.slice(5, 7), 10)
+    // Show at least 6 months of history so new users have months to scroll through.
+    // If the earliest entry predates that window, extend back to cover it.
+    const floor = new Date(today + 'T00:00:00.000Z')
+    floor.setUTCMonth(floor.getUTCMonth() - 6)
+    let startYear = floor.getUTCFullYear()
+    let startMonth = floor.getUTCMonth() + 1
+
+    if (entries.length > 0) {
+      const earliest = entries[entries.length - 1].date
+      const ey = parseInt(earliest.slice(0, 4), 10)
+      const em = parseInt(earliest.slice(5, 7), 10)
+      if (ey < startYear || (ey === startYear && em < startMonth)) {
+        startYear = ey
+        startMonth = em
+      }
+    }
+
     return getMonthsUpToNow(startYear, startMonth)
   }, [entries, today])
 

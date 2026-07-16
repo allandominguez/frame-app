@@ -12,6 +12,7 @@ function makeCell(overrides: Partial<CalendarDayData> = {}): CalendarDayData {
     accentColor: null,
     hasPhoto: false,
     isToday: false,
+    isFuture: false,
     ...overrides,
   }
 }
@@ -56,10 +57,27 @@ describe('DayCell', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 
+  it('renders future days with reduced visual emphasis', () => {
+    const { getByText } = render(
+      <DayCell cell={makeCell({ isFuture: true })} size={SIZE} onPress={noop} />,
+    )
+    // Future days are not interactive — no button role
+    expect(screen.queryByRole('button')).toBeNull()
+    // Day number is still rendered
+    expect(getByText('14')).toBeTruthy()
+  })
+
   it('renders nothing for an empty leading cell', () => {
     render(
       <DayCell
-        cell={{ date: null, dayNumber: 0, accentColor: null, hasPhoto: false, isToday: false }}
+        cell={{
+          date: null,
+          dayNumber: 0,
+          accentColor: null,
+          hasPhoto: false,
+          isToday: false,
+          isFuture: false,
+        }}
         size={SIZE}
         onPress={noop}
       />,

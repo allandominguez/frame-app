@@ -12,7 +12,11 @@ type Props = {
 
 export function DayCell({ cell, size, onPress }: Props) {
   const cellStyle = [styles.cell, { width: size, height: CELL_HEIGHT }]
-  const dayNumStyle = [styles.dayNumber, cell.isToday && styles.dayNumberToday]
+  const dayNumStyle = [
+    styles.dayNumber,
+    cell.isFuture && styles.dayNumberFuture,
+    cell.isToday && styles.dayNumberToday,
+  ]
 
   if (!cell.date) {
     return <View style={cellStyle} />
@@ -45,12 +49,16 @@ export function DayCell({ cell, size, onPress }: Props) {
 const styles = StyleSheet.create({
   cell: {
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 10,
     gap: 4,
   },
   dayNumber: {
     ...Typography.labelSm,
     color: Colors.textPrimary,
+  },
+  dayNumberFuture: {
+    color: Colors.textTertiary,
   },
   dayNumberToday: {
     ...Typography.labelSmMedium,

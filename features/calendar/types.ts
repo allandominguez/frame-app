@@ -4,6 +4,7 @@ export type CalendarDayData = {
   accentColor: string | null
   hasPhoto: boolean
   isToday: boolean
+  isFuture: boolean
 }
 
 export type MonthData = {

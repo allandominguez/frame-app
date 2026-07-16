@@ -1,6 +1,21 @@
 import { DayEntry } from '../../lib/repositories/day'
 import { CalendarDayData, MonthData } from './types'
 
+export const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const
+
 export function buildMonthCells(
   year: number,
   month: number,
@@ -15,7 +30,14 @@ export function buildMonthCells(
   const cells: CalendarDayData[] = []
 
   for (let i = 0; i < leadingEmpties; i++) {
-    cells.push({ date: null, dayNumber: 0, accentColor: null, hasPhoto: false, isToday: false })
+    cells.push({
+      date: null,
+      dayNumber: 0,
+      accentColor: null,
+      hasPhoto: false,
+      isToday: false,
+      isFuture: false,
+    })
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -27,6 +49,7 @@ export function buildMonthCells(
       accentColor: entry?.accent_color ?? null,
       hasPhoto: !!entry?.photo_path,
       isToday: date === today,
+      isFuture: date > today,
     })
   }
 

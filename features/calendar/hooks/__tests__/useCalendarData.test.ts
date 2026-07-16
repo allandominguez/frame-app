@@ -53,19 +53,19 @@ describe('useCalendarData', () => {
     expect(result.current.today).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  it('builds the month list starting from the oldest entry', async () => {
-    // getAllDays returns DESC; oldest is last
-    getAllDays.mockResolvedValue([makeEntry('2026-07-16'), makeEntry('2026-06-01')])
+  it('extends the month list back to the oldest entry when it predates the 6-month window', async () => {
+    // getAllDays returns DESC; oldest is last. 2025-12 is more than 6 months before July 2026.
+    getAllDays.mockResolvedValue([makeEntry('2026-07-16'), makeEntry('2025-12-01')])
     const { result } = renderHook(() => useCalendarData())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.months[0]).toEqual({ year: 2026, month: 6 })
+    expect(result.current.months[0]).toEqual({ year: 2025, month: 12 })
   })
 
-  it('defaults the month list to the current month when there are no entries', async () => {
+  it('shows at least 6 months when there are no entries', async () => {
     getAllDays.mockResolvedValue([])
     const { result } = renderHook(() => useCalendarData())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.months).toHaveLength(1)
+    expect(result.current.months.length).toBeGreaterThanOrEqual(6)
   })
 
   it('exposes streak counts derived from entries with photos', async () => {
