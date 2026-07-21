@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FlatList, Pressable, StyleSheet, Text, View, ViewToken } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Colors, Spacing, Typography } from '../../../lib/design'
@@ -19,11 +19,11 @@ export function DayDetailScreen({ navigation, route }: Props) {
   const focusedIndex = visibleIndex ?? initialIndex
   const insets = useSafeAreaInsets()
 
-  const onViewableItemsChanged = ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems[0]?.index != null) {
       setVisibleIndex(viewableItems[0].index)
     }
-  }
+  }).current
 
   return (
     <View style={styles.root}>
