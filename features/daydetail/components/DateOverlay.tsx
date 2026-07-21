@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native'
+import { Animated, Easing, StyleSheet, Text } from 'react-native'
 import { Typography } from '../../../lib/design'
 
 const FADE_IN_MS = 200
@@ -31,7 +31,6 @@ export function DateOverlay({ label, accentColor, visible }: Props) {
 
   return (
     <Animated.View style={[styles.container, { opacity }]} pointerEvents="none">
-      <View testID="date-overlay-scrim" style={styles.scrim} />
       <Text style={[styles.label, { color: accentColor ?? DEFAULT_ACCENT_COLOR }]}>{label}</Text>
     </Animated.View>
   )
@@ -42,13 +41,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  // Nested inside the animated container so it fades in/out in lockstep with
-  // the label, rather than needing its own separately-timed animation.
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'black',
-    opacity: 0.5,
   },
   label: {
     ...Typography.displayXl,

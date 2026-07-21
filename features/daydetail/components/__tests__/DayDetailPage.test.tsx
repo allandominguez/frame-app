@@ -2,6 +2,16 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native'
 import { DayEntry } from '../../../../lib/repositories/day'
 import { DayDetailPage } from '../DayDetailPage'
 
+// PageBlur wraps expo-blur's native BlurView and Animated internals, which
+// aren't meaningfully assertable here — mock it to expose the `visible` prop
+// DayDetailPage passes in, so the reveal/blur wiring itself can be tested.
+jest.mock('../PageBlur', () => {
+  const { Text } = require('react-native')
+  return {
+    PageBlur: ({ visible }: { visible: boolean }) => <Text>{String(visible)}</Text>,
+  }
+})
+
 function makeEntry(overrides: Partial<DayEntry> = {}): DayEntry {
   return {
     date: '2026-06-08',
@@ -31,16 +41,6 @@ describe('DayDetailPage', () => {
   it('shows the photo for the entry', () => {
     render(<DayDetailPage entry={makeEntry()} isFocused height={400} />)
     expect(screen.getByLabelText('Photo from 2026-06-08')).toBeTruthy()
-  })
-
-  it('dims the page when it is not the focused entry', () => {
-    render(<DayDetailPage entry={makeEntry()} isFocused={false} height={400} />)
-    expect(screen.getByTestId('dim-overlay')).toBeTruthy()
-  })
-
-  it('does not apply the static dim to the focused page', () => {
-    render(<DayDetailPage entry={makeEntry()} isFocused height={400} />)
-    expect(screen.queryByTestId('dim-overlay')).toBeNull()
   })
 
   it('offers a way to dismiss the date overlay while it is showing', () => {
@@ -74,5 +74,87 @@ describe('DayDetailPage', () => {
   it('does not show the date overlay when the page is not focused', () => {
     render(<DayDetailPage entry={makeEntry()} isFocused={false} height={400} />)
     expect(screen.queryByText('8\nMon')).toBeNull()
+  })
+
+  it('shows day details on tap once the date overlay has cleared', () => {
+    render(
+      <DayDetailPage
+        entry={makeEntry({ location_name: 'Mission District' })}
+        isFocused
+        height={400}
+      />,
+    )
+
+    act(() => {
+      jest.advanceTimersByTime(1700)
+    })
+    fireEvent.press(screen.getByLabelText('Show day details'))
+
+    expect(screen.getByLabelText('Hide day details')).toBeTruthy()
+  })
+
+  it('hides day details when tapped again', () => {
+    render(
+      <DayDetailPage
+        entry={makeEntry({ location_name: 'Mission District' })}
+        isFocused
+        height={400}
+      />,
+    )
+
+    act(() => {
+      jest.advanceTimersByTime(1700)
+    })
+    fireEvent.press(screen.getByLabelText('Show day details'))
+    fireEvent.press(screen.getByLabelText('Hide day details'))
+
+    expect(screen.getByLabelText('Show day details')).toBeTruthy()
+  })
+
+  it('dismisses the date overlay rather than showing day details on the first tap', () => {
+    render(
+      <DayDetailPage
+        entry={makeEntry({ location_name: 'Mission District' })}
+        isFocused
+        height={400}
+      />,
+    )
+
+    fireEvent.press(screen.getByLabelText('Dismiss date label'))
+
+    expect(screen.getByLabelText('Show day details')).toBeTruthy()
+  })
+
+  it('keeps the photo blurred before it is focused', () => {
+    render(<DayDetailPage entry={makeEntry()} isFocused={false} height={400} />)
+    expect(screen.getByText('true')).toBeTruthy()
+  })
+
+  it('keeps the photo blurred immediately after gaining focus, while the date overlay is still showing', () => {
+    render(<DayDetailPage entry={makeEntry()} isFocused height={400} />)
+    expect(screen.getByText('true')).toBeTruthy()
+  })
+
+  it('reveals the photo once the date overlay auto-dismisses', () => {
+    render(<DayDetailPage entry={makeEntry()} isFocused height={400} />)
+
+    act(() => {
+      jest.advanceTimersByTime(1700)
+    })
+
+    expect(screen.getByText('false')).toBeTruthy()
+  })
+
+  it('re-blurs the photo if focus is lost after being revealed', () => {
+    const { rerender } = render(<DayDetailPage entry={makeEntry()} isFocused height={400} />)
+
+    act(() => {
+      jest.advanceTimersByTime(1700)
+    })
+    expect(screen.getByText('false')).toBeTruthy()
+
+    rerender(<DayDetailPage entry={makeEntry()} isFocused={false} height={400} />)
+
+    expect(screen.getByText('true')).toBeTruthy()
   })
 })

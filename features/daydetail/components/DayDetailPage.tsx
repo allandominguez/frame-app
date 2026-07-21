@@ -1,8 +1,11 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native'
+import { Image, Pressable, StyleSheet } from 'react-native'
 import { DayEntry } from '../../../lib/repositories/day'
 import { useDateOverlayVisibility } from '../hooks/useDateOverlayVisibility'
+import { useDetailOverlayVisibility } from '../hooks/useDetailOverlayVisibility'
 import { formatDateOverlayLabel } from '../utils'
 import { DateOverlay } from './DateOverlay'
+import { DetailOverlay } from './DetailOverlay'
+import { PageBlur } from './PageBlur'
 
 type Props = {
   entry: DayEntry
@@ -12,14 +15,37 @@ type Props = {
 
 export function DayDetailPage({ entry, isFocused, height }: Props) {
   const { visible: dateOverlayVisible, dismiss } = useDateOverlayVisibility(isFocused)
+  const { visible: detailOverlayVisible, toggle: toggleDetailOverlay } =
+    useDetailOverlayVisibility(isFocused)
+
+  // The photo only becomes visible once it's the settled, focused page AND
+  // the date overlay has fully finished — otherwise it stays blurred, so
+  // there's no gap between "not yet focused" and "overlay showing" where an
+  // unblurred frame could flash through.
+  const revealed = isFocused && !dateOverlayVisible
+
+  // While the date label is showing, a tap dismisses it early; once it's
+  // gone, the same tap toggles the location/note overlay instead.
+  const handlePress = () => {
+    if (dateOverlayVisible) {
+      dismiss()
+      return
+    }
+    toggleDetailOverlay()
+  }
+
+  const accessibilityLabel = dateOverlayVisible
+    ? 'Dismiss date label'
+    : detailOverlayVisible
+      ? 'Hide day details'
+      : 'Show day details'
 
   return (
     <Pressable
       style={[styles.page, { height }]}
-      onPress={dismiss}
-      disabled={!dateOverlayVisible}
-      accessibilityRole={dateOverlayVisible ? 'button' : undefined}
-      accessibilityLabel={dateOverlayVisible ? 'Dismiss date label' : undefined}
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
     >
       <Image
         source={{ uri: entry.photo_path! }}
@@ -28,12 +54,19 @@ export function DayDetailPage({ entry, isFocused, height }: Props) {
         accessibilityLabel={`Photo from ${entry.date}`}
         accessibilityRole="image"
       />
-      {!isFocused && <View testID="dim-overlay" style={styles.dim} />}
+      <PageBlur visible={!revealed} />
       {isFocused && (
         <DateOverlay
           label={formatDateOverlayLabel(entry.date)}
           accentColor={entry.accent_color}
           visible={dateOverlayVisible}
+        />
+      )}
+      {isFocused && (
+        <DetailOverlay
+          visible={detailOverlayVisible}
+          locationName={entry.location_name}
+          noteText={entry.note_text}
         />
       )}
     </Pressable>
@@ -46,10 +79,5 @@ const styles = StyleSheet.create({
   },
   photo: {
     flex: 1,
-  },
-  dim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'black',
-    opacity: 0.5,
   },
 })

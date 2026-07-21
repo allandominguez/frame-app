@@ -18,9 +18,4 @@ describe('DateOverlay', () => {
     const style = screen.getByText('8\nMon').props.style
     expect(style).toEqual(expect.arrayContaining([expect.objectContaining({ color: '#FFFFFF' })]))
   })
-
-  it('renders a dimming scrim alongside the label', () => {
-    render(<DateOverlay label={'8\nMon'} accentColor="#4A90E2" visible />)
-    expect(screen.getByTestId('date-overlay-scrim')).toBeTruthy()
-  })
 })
