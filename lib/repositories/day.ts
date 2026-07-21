@@ -62,3 +62,12 @@ export async function deleteDay(date: string): Promise<void> {
   const db = await openDatabase()
   await db.runAsync('DELETE FROM day_entries WHERE date = ?', [date])
 }
+
+export async function updateNoteText(date: string, noteText: string | null): Promise<void> {
+  const db = await openDatabase()
+  await db.runAsync('UPDATE day_entries SET note_text = ?, updated_at = ? WHERE date = ?', [
+    noteText,
+    new Date().toISOString(),
+    date,
+  ])
+}

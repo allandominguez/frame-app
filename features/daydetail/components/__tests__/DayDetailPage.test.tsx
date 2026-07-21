@@ -12,6 +12,12 @@ jest.mock('../PageBlur', () => {
   }
 })
 
+const mockUpdateNoteText = jest.fn()
+
+jest.mock('../../../../lib/repositories/day', () => ({
+  updateNoteText: (...args: unknown[]) => mockUpdateNoteText(...args),
+}))
+
 function makeEntry(overrides: Partial<DayEntry> = {}): DayEntry {
   return {
     date: '2026-06-08',
@@ -31,6 +37,7 @@ function makeEntry(overrides: Partial<DayEntry> = {}): DayEntry {
 
 describe('DayDetailPage', () => {
   beforeEach(() => {
+    jest.clearAllMocks()
     jest.useFakeTimers()
   })
 
@@ -156,5 +163,45 @@ describe('DayDetailPage', () => {
     rerender(<DayDetailPage entry={makeEntry()} isFocused={false} height={400} />)
 
     expect(screen.getByText('true')).toBeTruthy()
+  })
+
+  function revealDayDetails(entry: DayEntry = makeEntry()) {
+    render(<DayDetailPage entry={entry} isFocused height={400} />)
+    act(() => {
+      jest.advanceTimersByTime(1700)
+    })
+    fireEvent.press(screen.getByLabelText('Show day details'))
+  }
+
+  it('saves the note after the debounce elapses while typing', () => {
+    revealDayDetails(makeEntry({ date: '2026-06-08' }))
+
+    fireEvent.changeText(screen.getByLabelText('Note for this day'), 'A great day')
+    act(() => {
+      jest.advanceTimersByTime(600)
+    })
+
+    expect(mockUpdateNoteText).toHaveBeenCalledWith('2026-06-08', 'A great day')
+  })
+
+  it('consumes the tap immediately following a note blur, without toggling day details', () => {
+    revealDayDetails()
+
+    fireEvent(screen.getByLabelText('Note for this day'), 'blur')
+    fireEvent.press(screen.getByLabelText('Hide day details'))
+
+    expect(screen.getByLabelText('Hide day details')).toBeTruthy()
+  })
+
+  it('toggles day details normally once the post-blur tap has settled', () => {
+    revealDayDetails()
+
+    fireEvent(screen.getByLabelText('Note for this day'), 'blur')
+    act(() => {
+      jest.advanceTimersByTime(1)
+    })
+    fireEvent.press(screen.getByLabelText('Hide day details'))
+
+    expect(screen.getByLabelText('Show day details')).toBeTruthy()
   })
 })

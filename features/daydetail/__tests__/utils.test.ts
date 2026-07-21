@@ -1,4 +1,4 @@
-import { formatDateOverlayLabel } from '../utils'
+import { formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
 
 describe('formatDateOverlayLabel', () => {
   it('formats as day-of-month and abbreviated weekday on separate lines', () => {
@@ -11,5 +11,22 @@ describe('formatDateOverlayLabel', () => {
 
   it('formats a Sunday correctly', () => {
     expect(formatDateOverlayLabel('2026-06-07')).toBe('7\nSun')
+  })
+})
+
+describe('pickNotePlaceholder', () => {
+  it('returns one of the known placeholder prompts', () => {
+    const knownPlaceholders = [
+      'Just type...',
+      'Leave a note...',
+      'Anything to remember?',
+      'Dear future me...',
+      'Behind the scenes...',
+      "What's happening?",
+    ]
+
+    for (let i = 0; i < 20; i++) {
+      expect(knownPlaceholders).toContain(pickNotePlaceholder())
+    }
   })
 })
