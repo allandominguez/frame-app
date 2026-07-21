@@ -1,5 +1,8 @@
-import { Image, StyleSheet, View } from 'react-native'
+import { Image, Pressable, StyleSheet, View } from 'react-native'
 import { DayEntry } from '../../../lib/repositories/day'
+import { useDateOverlayVisibility } from '../hooks/useDateOverlayVisibility'
+import { formatDateOverlayLabel } from '../utils'
+import { DateOverlay } from './DateOverlay'
 
 type Props = {
   entry: DayEntry
@@ -8,8 +11,16 @@ type Props = {
 }
 
 export function DayDetailPage({ entry, isFocused, height }: Props) {
+  const { visible: dateOverlayVisible, dismiss } = useDateOverlayVisibility(isFocused)
+
   return (
-    <View style={[styles.page, { height }]}>
+    <Pressable
+      style={[styles.page, { height }]}
+      onPress={dismiss}
+      disabled={!dateOverlayVisible}
+      accessibilityRole={dateOverlayVisible ? 'button' : undefined}
+      accessibilityLabel={dateOverlayVisible ? 'Dismiss date label' : undefined}
+    >
       <Image
         source={{ uri: entry.photo_path! }}
         style={styles.photo}
@@ -18,7 +29,14 @@ export function DayDetailPage({ entry, isFocused, height }: Props) {
         accessibilityRole="image"
       />
       {!isFocused && <View testID="dim-overlay" style={styles.dim} />}
-    </View>
+      {isFocused && (
+        <DateOverlay
+          label={formatDateOverlayLabel(entry.date)}
+          accentColor={entry.accent_color}
+          visible={dateOverlayVisible}
+        />
+      )}
+    </Pressable>
   )
 }
 
