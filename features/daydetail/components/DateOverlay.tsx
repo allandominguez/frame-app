@@ -11,11 +11,12 @@ const DEFAULT_ACCENT_COLOR = '#FFFFFF'
 
 type Props = {
   label: string
+  accessibilityLabel: string
   accentColor: string | null
   visible: boolean
 }
 
-export function DateOverlay({ label, accentColor, visible }: Props) {
+export function DateOverlay({ label, accessibilityLabel, accentColor, visible }: Props) {
   const opacity = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
@@ -31,7 +32,12 @@ export function DateOverlay({ label, accentColor, visible }: Props) {
 
   return (
     <Animated.View style={[styles.container, { opacity }]} pointerEvents="none">
-      <Text style={[styles.label, { color: accentColor ?? DEFAULT_ACCENT_COLOR }]}>{label}</Text>
+      <Text
+        style={[styles.label, { color: accentColor ?? DEFAULT_ACCENT_COLOR }]}
+        accessibilityLabel={accessibilityLabel}
+      >
+        {label}
+      </Text>
     </Animated.View>
   )
 }

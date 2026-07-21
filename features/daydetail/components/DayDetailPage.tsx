@@ -4,7 +4,7 @@ import { DayEntry } from '../../../lib/repositories/day'
 import { useDateOverlayVisibility } from '../hooks/useDateOverlayVisibility'
 import { useDetailOverlayVisibility } from '../hooks/useDetailOverlayVisibility'
 import { useNoteEditor } from '../hooks/useNoteEditor'
-import { formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
+import { formatDateAccessibilityLabel, formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
 import { DateOverlay } from './DateOverlay'
 import { DetailOverlay } from './DetailOverlay'
 import { PageBlur } from './PageBlur'
@@ -77,13 +77,14 @@ export function DayDetailPage({ entry, isFocused, height }: Props) {
         source={{ uri: entry.photo_path! }}
         style={styles.photo}
         resizeMode="cover"
-        accessibilityLabel={`Photo from ${entry.date}`}
+        accessibilityLabel={`Photo from ${formatDateAccessibilityLabel(entry.date)}`}
         accessibilityRole="image"
       />
       <PageBlur visible={!revealed} />
       {isFocused && (
         <DateOverlay
           label={formatDateOverlayLabel(entry.date)}
+          accessibilityLabel={formatDateAccessibilityLabel(entry.date)}
           accentColor={entry.accent_color}
           visible={dateOverlayVisible}
         />

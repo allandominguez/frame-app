@@ -47,7 +47,7 @@ describe('DayDetailPage', () => {
 
   it('shows the photo for the entry', () => {
     render(<DayDetailPage entry={makeEntry()} isFocused height={400} />)
-    expect(screen.getByLabelText('Photo from 2026-06-08')).toBeTruthy()
+    expect(screen.getByLabelText('Photo from Monday, 8 June 2026')).toBeTruthy()
   })
 
   it('offers a way to dismiss the date overlay while it is showing', () => {
