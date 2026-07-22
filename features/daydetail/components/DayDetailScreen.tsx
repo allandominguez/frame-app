@@ -69,14 +69,16 @@ export function DayDetailScreen({ navigation, route }: Props) {
           />
         )}
       </View>
-      <Pressable
-        style={[styles.back, { top: insets.top + Spacing.sm }]}
-        onPress={() => navigation.goBack()}
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-      >
-        <Text style={styles.backLabel}>✕</Text>
-      </Pressable>
+      {!dateOverlayVisible && (
+        <Pressable
+          style={[styles.back, { top: insets.top + Spacing.sm }]}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <Text style={styles.backLabel}>✕</Text>
+        </Pressable>
+      )}
     </View>
   )
 }
@@ -96,7 +98,8 @@ const styles = StyleSheet.create({
   },
   backLabel: {
     fontFamily: FontFamily.sans,
-    fontSize: 20,
+    fontSize: 16,
     color: Colors.surface,
+    opacity: 0.6,
   },
 })
