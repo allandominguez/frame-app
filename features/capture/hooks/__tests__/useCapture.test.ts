@@ -3,14 +3,14 @@ import { Alert, AlertButton } from 'react-native'
 import { CaptureResult } from '../../types'
 import { useCapture } from '../useCapture'
 
-let capturedOnComplete: ((result: CaptureResult) => void) | null = null
+let capturedOnComplete: ((result: CaptureResult) => void | Promise<void>) | null = null
 const mockOpenSheet = jest.fn()
 const mockGetDay = jest.fn()
 const mockUpsertDayPhoto = jest.fn()
 const mockDeletePhoto = jest.fn()
 
 jest.mock('../usePhotoPicker', () => ({
-  usePhotoPicker: (onCaptureComplete: (result: CaptureResult) => void) => {
+  usePhotoPicker: (onCaptureComplete: (result: CaptureResult) => void | Promise<void>) => {
     capturedOnComplete = onCaptureComplete
     return {
       openSheet: mockOpenSheet,
@@ -70,29 +70,29 @@ describe('useCapture', () => {
   })
 
   describe('opening the sheet', () => {
-    it('opens the sheet directly when today has no photo', async () => {
+    it('opens the sheet directly when the target date has no photo', async () => {
       const alertSpy = jest.spyOn(Alert, 'alert')
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
 
       expect(alertSpy).not.toHaveBeenCalled()
       expect(mockOpenSheet).toHaveBeenCalled()
     })
 
-    it('prompts for confirmation before opening when today already has a photo', async () => {
+    it('prompts for confirmation before opening when the target date already has a photo', async () => {
       mockGetDay.mockResolvedValue({ photo_path: 'file://documents/photos/old.jpg' })
       const alertSpy = simulateAlert('Replace')
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
 
       expect(alertSpy).toHaveBeenCalledWith(
-        "Replace today's photo?",
+        "Replace this day's photo?",
         'Your current photo will be permanently deleted.',
         expect.any(Array),
       )
@@ -105,26 +105,45 @@ describe('useCapture', () => {
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
 
       expect(mockOpenSheet).not.toHaveBeenCalled()
     })
 
-    it('opens the sheet without re-prompting when called again after confirmation', async () => {
+    it('opens the sheet without re-prompting when called again for the same date after confirmation', async () => {
       mockGetDay.mockResolvedValue({ photo_path: 'file://documents/photos/old.jpg' })
       const alertSpy = simulateAlert('Replace')
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
 
       expect(alertSpy).toHaveBeenCalledTimes(1)
       expect(mockOpenSheet).toHaveBeenCalledTimes(2)
+    })
+
+    it('prompts again when switching to a different date that also has a photo', async () => {
+      mockGetDay.mockResolvedValue({ photo_path: 'file://documents/photos/old.jpg' })
+      const alertSpy = jest.spyOn(Alert, 'alert')
+      simulateAlert('Replace')
+      const { result } = renderHook(() => useCapture())
+
+      await act(async () => {
+        await result.current.openSheet('2026-06-15')
+      })
+
+      simulateAlert('Replace')
+      await act(async () => {
+        await result.current.openSheet('2026-06-10')
+      })
+
+      expect(alertSpy).toHaveBeenCalledTimes(2)
+      expect(mockGetDay).toHaveBeenCalledWith('2026-06-10')
     })
   })
 
@@ -135,7 +154,7 @@ describe('useCapture', () => {
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
 
       expect(mockDeletePhoto).not.toHaveBeenCalled()
@@ -147,7 +166,7 @@ describe('useCapture', () => {
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
       await act(async () => {
         await capturedOnComplete!(RESULT)
@@ -163,7 +182,7 @@ describe('useCapture', () => {
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
       await act(async () => {
         await capturedOnComplete!(RESULT)
@@ -185,7 +204,7 @@ describe('useCapture', () => {
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
       await act(async () => {
         await capturedOnComplete!({
@@ -210,7 +229,7 @@ describe('useCapture', () => {
       const { result } = renderHook(() => useCapture())
 
       await act(async () => {
-        await result.current.openSheet()
+        await result.current.openSheet('2026-06-15')
       })
       await act(async () => {
         await capturedOnComplete!({
