@@ -1,4 +1,4 @@
-import { deleteDay, DayEntryInput, getAllDays, getDay, upsertDay } from '../day'
+import { deleteDay, DayEntryInput, getAllDays, getDay, updateNoteText, upsertDay } from '../day'
 
 const mockDayStore = new Map<string, Record<string, unknown>>()
 
@@ -60,6 +60,12 @@ jest.mock('expo-sqlite', () => ({
           created_at: existing ? (existing.created_at as string) : created_at,
           updated_at,
         })
+      } else if (/update day_entries set note_text/i.test(sql)) {
+        const [note_text, updated_at, date] = params as [string | null, string, string]
+        const existing = mockDayStore.get(date)
+        if (existing) {
+          mockDayStore.set(date, { ...existing, note_text, updated_at })
+        }
       } else if (/delete from day_entries/i.test(sql)) {
         mockDayStore.delete(params![0] as string)
       }
@@ -199,5 +205,30 @@ describe('deleteDay', () => {
 
   it('does nothing when the date does not exist', async () => {
     await expect(deleteDay('2026-01-01')).resolves.not.toThrow()
+  })
+})
+
+describe('updateNoteText', () => {
+  it('updates the note text for an existing entry', async () => {
+    await upsertDay(makeInput({ note_text: 'Original' }))
+    await updateNoteText('2026-06-08', 'Updated')
+
+    expect((await getDay('2026-06-08'))?.note_text).toBe('Updated')
+  })
+
+  it('clears the note text when given null', async () => {
+    await upsertDay(makeInput({ note_text: 'Original' }))
+    await updateNoteText('2026-06-08', null)
+
+    expect((await getDay('2026-06-08'))?.note_text).toBeNull()
+  })
+
+  it('does not affect other fields on the entry', async () => {
+    await upsertDay(makeInput({ photo_path: '/photo.jpg', location_name: 'London' }))
+    await updateNoteText('2026-06-08', 'Updated')
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.photo_path).toBe('/photo.jpg')
+    expect(entry?.location_name).toBe('London')
   })
 })
