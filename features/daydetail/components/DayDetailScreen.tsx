@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Colors, FontFamily, Spacing } from '../../../lib/design'
 import { DayEntry } from '../../../lib/repositories/day'
 import { RootStackParamList } from '../../../navigation/types'
+import { useDateOverlayVisibility } from '../hooks/useDateOverlayVisibility'
 import { useDayDetailFeed } from '../hooks/useDayDetailFeed'
+import { useDetailOverlayVisibility } from '../hooks/useDetailOverlayVisibility'
 import { DayDetailPage } from './DayDetailPage'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DayDetail'>
@@ -18,6 +20,11 @@ export function DayDetailScreen({ navigation, route }: Props) {
   const [visibleIndex, setVisibleIndex] = useState<number | null>(null)
   const focusedIndex = visibleIndex ?? initialIndex
   const insets = useSafeAreaInsets()
+
+  const { visible: dateOverlayVisible, dismiss: dismissDateOverlay } =
+    useDateOverlayVisibility(focusedIndex)
+  const { visible: detailOverlayVisible, toggle: toggleDetailOverlay } =
+    useDetailOverlayVisibility(focusedIndex)
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems[0]?.index != null) {
@@ -34,7 +41,15 @@ export function DayDetailScreen({ navigation, route }: Props) {
             keyExtractor={(item) => item.date}
             initialScrollIndex={initialIndex}
             renderItem={({ item, index }: { item: DayEntry; index: number }) => (
-              <DayDetailPage entry={item} isFocused={index === focusedIndex} height={pageHeight} />
+              <DayDetailPage
+                entry={item}
+                isFocused={index === focusedIndex}
+                height={pageHeight}
+                dateOverlayVisible={dateOverlayVisible}
+                dismissDateOverlay={dismissDateOverlay}
+                detailOverlayVisible={detailOverlayVisible}
+                toggleDetailOverlay={toggleDetailOverlay}
+              />
             )}
             pagingEnabled
             showsVerticalScrollIndicator={false}
