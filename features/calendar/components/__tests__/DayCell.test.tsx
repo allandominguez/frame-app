@@ -68,9 +68,11 @@ describe('DayCell', () => {
     expect(onLongPress).toHaveBeenCalledWith('2026-07-14')
   })
 
-  it('is not pressable when the day has no photo', () => {
-    render(<DayCell cell={makeCell()} size={SIZE} onPress={noop} onLongPress={noop} />)
-    expect(screen.queryByRole('button')).toBeNull()
+  it('is pressable when the day has no photo but is not in the future', () => {
+    const onPress = jest.fn()
+    render(<DayCell cell={makeCell()} size={SIZE} onPress={onPress} onLongPress={noop} />)
+    fireEvent.press(screen.getByRole('button'))
+    expect(onPress).toHaveBeenCalledWith('2026-07-14')
   })
 
   it('renders future days with reduced visual emphasis', () => {
