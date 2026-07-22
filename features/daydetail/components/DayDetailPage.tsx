@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react'
 import { Image, Pressable, StyleSheet } from 'react-native'
 import { DayEntry } from '../../../lib/repositories/day'
-import { useDateOverlayVisibility } from '../hooks/useDateOverlayVisibility'
-import { useDetailOverlayVisibility } from '../hooks/useDetailOverlayVisibility'
 import { useNoteEditor } from '../hooks/useNoteEditor'
 import { formatDateAccessibilityLabel, formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
 import { DateOverlay } from './DateOverlay'
@@ -13,12 +11,21 @@ type Props = {
   entry: DayEntry
   isFocused: boolean
   height: number
+  dateOverlayVisible: boolean
+  dismissDateOverlay: () => void
+  detailOverlayVisible: boolean
+  toggleDetailOverlay: () => void
 }
 
-export function DayDetailPage({ entry, isFocused, height }: Props) {
-  const { visible: dateOverlayVisible, dismiss } = useDateOverlayVisibility(isFocused)
-  const { visible: detailOverlayVisible, toggle: toggleDetailOverlay } =
-    useDetailOverlayVisibility(isFocused)
+export function DayDetailPage({
+  entry,
+  isFocused,
+  height,
+  dateOverlayVisible,
+  dismissDateOverlay,
+  detailOverlayVisible,
+  toggleDetailOverlay,
+}: Props) {
   const noteEditor = useNoteEditor(entry.date, entry.note_text)
   // Picked once per mount rather than on every render, so it doesn't change
   // while the user is looking at (or clearing) an empty note.
@@ -54,22 +61,28 @@ export function DayDetailPage({ entry, isFocused, height }: Props) {
       return
     }
     if (dateOverlayVisible) {
-      dismiss()
+      dismissDateOverlay()
       return
     }
     toggleDetailOverlay()
   }
 
-  const accessibilityLabel = dateOverlayVisible
-    ? 'Dismiss date label'
-    : detailOverlayVisible
-      ? 'Hide day details'
-      : 'Show day details'
+  // dateOverlayVisible/detailOverlayVisible describe the currently-focused
+  // page, not necessarily this one — a non-focused page has nothing of its
+  // own to announce, and it's disabled below anyway, so it gets no label.
+  const accessibilityLabel = !isFocused
+    ? undefined
+    : dateOverlayVisible
+      ? 'Dismiss date label'
+      : detailOverlayVisible
+        ? 'Hide day details'
+        : 'Show day details'
 
   return (
     <Pressable
       style={[styles.page, { height }]}
       onPress={handlePress}
+      disabled={!isFocused}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >

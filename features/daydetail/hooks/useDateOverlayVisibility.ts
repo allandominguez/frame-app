@@ -8,19 +8,23 @@ export type DateOverlayVisibility = {
   dismiss: () => void
 }
 
-export function useDateOverlayVisibility(isFocused: boolean): DateOverlayVisibility {
-  const [visible, setVisible] = useState(isFocused)
+export function useDateOverlayVisibility(focusedIndex: number): DateOverlayVisibility {
+  const [visible, setVisible] = useState(true)
+  const [prevFocusedIndex, setPrevFocusedIndex] = useState(focusedIndex)
+
+  // Flip back to visible synchronously during render, not in an effect —
+  // an effect-based reset lags one commit behind the focusedIndex change,
+  // which painted a stale value from the previously-focused page for one
+  // frame on every swipe.
+  if (focusedIndex !== prevFocusedIndex) {
+    setPrevFocusedIndex(focusedIndex)
+    setVisible(true)
+  }
 
   useEffect(() => {
-    if (!isFocused) {
-      setVisible(false)
-      return
-    }
-
-    setVisible(true)
     const timer = setTimeout(() => setVisible(false), FADE_IN_MS + HOLD_MS)
     return () => clearTimeout(timer)
-  }, [isFocused])
+  }, [focusedIndex])
 
   return { visible, dismiss: () => setVisible(false) }
 }

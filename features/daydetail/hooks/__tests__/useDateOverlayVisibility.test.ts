@@ -10,18 +10,13 @@ describe('useDateOverlayVisibility', () => {
     jest.useRealTimers()
   })
 
-  it('is visible as soon as the page becomes focused', () => {
-    const { result } = renderHook(() => useDateOverlayVisibility(true))
+  it('is visible for the newly-focused page', () => {
+    const { result } = renderHook(() => useDateOverlayVisibility(0))
     expect(result.current.visible).toBe(true)
   })
 
-  it('is not visible when the page is not focused', () => {
-    const { result } = renderHook(() => useDateOverlayVisibility(false))
-    expect(result.current.visible).toBe(false)
-  })
-
   it('stays visible through the fade-in and hold duration', () => {
-    const { result } = renderHook(() => useDateOverlayVisibility(true))
+    const { result } = renderHook(() => useDateOverlayVisibility(0))
 
     act(() => {
       jest.advanceTimersByTime(1699)
@@ -31,7 +26,7 @@ describe('useDateOverlayVisibility', () => {
   })
 
   it('auto-dismisses once the fade-in and hold duration elapse', () => {
-    const { result } = renderHook(() => useDateOverlayVisibility(true))
+    const { result } = renderHook(() => useDateOverlayVisibility(0))
 
     act(() => {
       jest.advanceTimersByTime(1700)
@@ -41,7 +36,7 @@ describe('useDateOverlayVisibility', () => {
   })
 
   it('dismisses immediately when dismiss() is called before the hold elapses', () => {
-    const { result } = renderHook(() => useDateOverlayVisibility(true))
+    const { result } = renderHook(() => useDateOverlayVisibility(0))
 
     act(() => {
       result.current.dismiss()
@@ -50,10 +45,10 @@ describe('useDateOverlayVisibility', () => {
     expect(result.current.visible).toBe(false)
   })
 
-  it('becomes visible again if the page regains focus after losing it', () => {
-    const { result, rerender } = renderHook<DateOverlayVisibility, { isFocused: boolean }>(
-      ({ isFocused }) => useDateOverlayVisibility(isFocused),
-      { initialProps: { isFocused: true } },
+  it('becomes visible again when the focused page changes', () => {
+    const { result, rerender } = renderHook<DateOverlayVisibility, { focusedIndex: number }>(
+      ({ focusedIndex }) => useDateOverlayVisibility(focusedIndex),
+      { initialProps: { focusedIndex: 0 } },
     )
 
     act(() => {
@@ -61,8 +56,7 @@ describe('useDateOverlayVisibility', () => {
     })
     expect(result.current.visible).toBe(false)
 
-    rerender({ isFocused: false })
-    rerender({ isFocused: true })
+    rerender({ focusedIndex: 1 })
 
     expect(result.current.visible).toBe(true)
   })
