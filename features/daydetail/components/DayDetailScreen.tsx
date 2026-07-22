@@ -2,7 +2,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { useRef, useState } from 'react'
 import { FlatList, Pressable, StyleSheet, Text, View, ViewToken } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Colors, Spacing, Typography } from '../../../lib/design'
+import { Colors, FontFamily, Spacing } from '../../../lib/design'
 import { DayEntry } from '../../../lib/repositories/day'
 import { RootStackParamList } from '../../../navigation/types'
 import { useDayDetailFeed } from '../hooks/useDayDetailFeed'
@@ -54,7 +54,7 @@ export function DayDetailScreen({ navigation, route }: Props) {
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <Text style={styles.backLabel}>Back</Text>
+        <Text style={styles.backLabel}>✕</Text>
       </Pressable>
     </View>
   )
@@ -70,11 +70,12 @@ const styles = StyleSheet.create({
   },
   back: {
     position: 'absolute',
-    left: Spacing.md,
+    right: Spacing.md,
     padding: Spacing.md,
   },
   backLabel: {
-    ...Typography.labelMd,
+    fontFamily: FontFamily.sans,
+    fontSize: 20,
     color: Colors.surface,
   },
 })
