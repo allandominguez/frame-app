@@ -3,6 +3,7 @@ import { PhotoPickerSheet } from '../PhotoPickerSheet'
 
 const baseProps = {
   visible: true,
+  allowCamera: true,
   onTakePhoto: jest.fn(),
   onChooseFromGallery: jest.fn(),
   onDismiss: jest.fn(),
@@ -16,6 +17,16 @@ describe('PhotoPickerSheet', () => {
 
     expect(getByLabelText('Take photo')).toBeTruthy()
     expect(getByLabelText('Choose from gallery')).toBeTruthy()
+  })
+
+  it('hides Take photo and shows a backfill title when the camera is not allowed', () => {
+    const { getByText, queryByLabelText, getByLabelText } = render(
+      <PhotoPickerSheet {...baseProps} allowCamera={false} />,
+    )
+
+    expect(queryByLabelText('Take photo')).toBeNull()
+    expect(getByLabelText('Choose from gallery')).toBeTruthy()
+    expect(getByText('Add photo for this day')).toBeTruthy()
   })
 
   it('calls onTakePhoto when Take photo is pressed', () => {
