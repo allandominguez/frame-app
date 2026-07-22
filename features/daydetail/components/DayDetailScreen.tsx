@@ -6,6 +6,7 @@ import { Colors, FontFamily, Spacing } from '../../../lib/design'
 import { DayEntry } from '../../../lib/repositories/day'
 import { RootStackParamList } from '../../../navigation/types'
 import { useDateOverlayVisibility } from '../hooks/useDateOverlayVisibility'
+import { useDayDetailBackHandler } from '../hooks/useDayDetailBackHandler'
 import { useDayDetailFeed } from '../hooks/useDayDetailFeed'
 import { useDetailOverlayVisibility } from '../hooks/useDetailOverlayVisibility'
 import { DayDetailPage } from './DayDetailPage'
@@ -23,8 +24,13 @@ export function DayDetailScreen({ navigation, route }: Props) {
 
   const { visible: dateOverlayVisible, dismiss: dismissDateOverlay } =
     useDateOverlayVisibility(focusedIndex)
-  const { visible: detailOverlayVisible, toggle: toggleDetailOverlay } =
-    useDetailOverlayVisibility(focusedIndex)
+  const {
+    visible: detailOverlayVisible,
+    toggle: toggleDetailOverlay,
+    close: closeDetailOverlay,
+  } = useDetailOverlayVisibility(focusedIndex)
+
+  useDayDetailBackHandler(detailOverlayVisible, closeDetailOverlay)
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems[0]?.index != null) {
