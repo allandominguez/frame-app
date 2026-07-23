@@ -1,4 +1,12 @@
-import { deleteDay, DayEntryInput, getAllDays, getDay, updateNoteText, upsertDay } from '../day'
+import {
+  clearPhoto,
+  deleteDay,
+  DayEntryInput,
+  getAllDays,
+  getDay,
+  updateNoteText,
+  upsertDay,
+} from '../day'
 
 const mockDayStore = new Map<string, Record<string, unknown>>()
 
@@ -65,6 +73,22 @@ jest.mock('expo-sqlite', () => ({
         const existing = mockDayStore.get(date)
         if (existing) {
           mockDayStore.set(date, { ...existing, note_text, updated_at })
+        }
+      } else if (/update day_entries set\s+photo_path/i.test(sql)) {
+        const [updated_at, date] = params as [string, string]
+        const existing = mockDayStore.get(date)
+        if (existing) {
+          mockDayStore.set(date, {
+            ...existing,
+            photo_path: null,
+            latitude: null,
+            longitude: null,
+            location_name: null,
+            location_source: null,
+            accent_color: null,
+            share_color: null,
+            updated_at,
+          })
         }
       } else if (/delete from day_entries/i.test(sql)) {
         mockDayStore.delete(params![0] as string)
@@ -230,5 +254,47 @@ describe('updateNoteText', () => {
     const entry = await getDay('2026-06-08')
     expect(entry?.photo_path).toBe('/photo.jpg')
     expect(entry?.location_name).toBe('London')
+  })
+})
+
+describe('clearPhoto', () => {
+  it('clears photo, location, and color fields', async () => {
+    await upsertDay(
+      makeInput({
+        photo_path: '/photo.jpg',
+        latitude: 51.5074,
+        longitude: -0.1278,
+        location_name: 'London',
+        location_source: 'device',
+        accent_color: '#A3C4F5',
+        share_color: 'blue',
+      }),
+    )
+
+    await clearPhoto('2026-06-08')
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.photo_path).toBeNull()
+    expect(entry?.latitude).toBeNull()
+    expect(entry?.longitude).toBeNull()
+    expect(entry?.location_name).toBeNull()
+    expect(entry?.location_source).toBeNull()
+    expect(entry?.accent_color).toBeNull()
+    expect(entry?.share_color).toBeNull()
+  })
+
+  it('preserves note_text and created_at', async () => {
+    await upsertDay(makeInput({ photo_path: '/photo.jpg', note_text: 'A great day' }))
+    const original = await getDay('2026-06-08')
+
+    await clearPhoto('2026-06-08')
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.note_text).toBe('A great day')
+    expect(entry?.created_at).toBe(original?.created_at)
+  })
+
+  it('does nothing when the date does not exist', async () => {
+    await expect(clearPhoto('2026-01-01')).resolves.not.toThrow()
   })
 })

@@ -71,3 +71,20 @@ export async function updateNoteText(date: string, noteText: string | null): Pro
     date,
   ])
 }
+
+export async function clearPhoto(date: string): Promise<void> {
+  const db = await openDatabase()
+  await db.runAsync(
+    `UPDATE day_entries SET
+       photo_path      = NULL,
+       latitude        = NULL,
+       longitude       = NULL,
+       location_name   = NULL,
+       location_source = NULL,
+       accent_color    = NULL,
+       share_color     = NULL,
+       updated_at      = ?
+     WHERE date = ?`,
+    [new Date().toISOString(), date],
+  )
+}
