@@ -1,8 +1,9 @@
+import { IconArrowLeft } from '@tabler/icons-react-native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { useRef, useState } from 'react'
-import { FlatList, Pressable, StyleSheet, Text, View, ViewToken } from 'react-native'
+import { FlatList, Pressable, StyleSheet, View, ViewToken } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Colors, FontFamily, Spacing } from '../../../lib/design'
+import { Colors, Spacing } from '../../../lib/design'
 import { DayEntry } from '../../../lib/repositories/day'
 import { RootStackParamList } from '../../../navigation/types'
 import { useDateOverlayVisibility } from '../hooks/useDateOverlayVisibility'
@@ -40,7 +41,11 @@ export function DayDetailScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.container} onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}>
+      <View
+        testID="day-detail-container"
+        style={styles.container}
+        onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}
+      >
         {!isLoading && pageHeight > 0 && entries.length > 0 && (
           <FlatList
             data={entries}
@@ -55,6 +60,7 @@ export function DayDetailScreen({ navigation, route }: Props) {
                 dismissDateOverlay={dismissDateOverlay}
                 detailOverlayVisible={detailOverlayVisible}
                 toggleDetailOverlay={toggleDetailOverlay}
+                onPhotoDeleted={() => navigation.goBack()}
               />
             )}
             pagingEnabled
@@ -76,7 +82,7 @@ export function DayDetailScreen({ navigation, route }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <Text style={styles.backLabel}>✕</Text>
+          <IconArrowLeft size={24} color={Colors.surface} style={styles.backIcon} />
         </Pressable>
       )}
     </View>
@@ -93,13 +99,10 @@ const styles = StyleSheet.create({
   },
   back: {
     position: 'absolute',
-    right: Spacing.md,
+    left: Spacing.md,
     padding: Spacing.md,
   },
-  backLabel: {
-    fontFamily: FontFamily.sans,
-    fontSize: 16,
-    color: Colors.surface,
+  backIcon: {
     opacity: 0.6,
   },
 })

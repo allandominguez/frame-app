@@ -1,5 +1,6 @@
 import { ComponentProps } from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react-native'
+import { Alert, AlertButton } from 'react-native'
 import { DayEntry } from '../../../../lib/repositories/day'
 import { DayDetailPage } from '../DayDetailPage'
 
@@ -14,10 +15,25 @@ jest.mock('../PageBlur', () => {
 })
 
 const mockUpdateNoteText = jest.fn()
+const mockClearPhoto = jest.fn()
 
 jest.mock('../../../../lib/repositories/day', () => ({
   updateNoteText: (...args: unknown[]) => mockUpdateNoteText(...args),
+  clearPhoto: (...args: unknown[]) => mockClearPhoto(...args),
 }))
+
+const mockDeletePhoto = jest.fn()
+
+jest.mock('../../../../lib/storage/photoStorage', () => ({
+  deletePhoto: (...args: unknown[]) => mockDeletePhoto(...args),
+}))
+
+function simulateAlert(choice: 'Cancel' | 'Delete') {
+  return jest.spyOn(Alert, 'alert').mockImplementationOnce((_title, _message, buttons) => {
+    const btn = (buttons as AlertButton[]).find((b) => b.text === choice)
+    btn?.onPress?.()
+  })
+}
 
 function makeEntry(overrides: Partial<DayEntry> = {}): DayEntry {
   return {
@@ -47,6 +63,7 @@ function makeProps(overrides: Partial<Props> = {}): Props {
     dismissDateOverlay: jest.fn(),
     detailOverlayVisible: false,
     toggleDetailOverlay: jest.fn(),
+    onPhotoDeleted: jest.fn(),
     ...overrides,
   }
 }
@@ -191,5 +208,36 @@ describe('DayDetailPage', () => {
     fireEvent.press(screen.getByLabelText('Hide day details'))
 
     expect(toggleDetailOverlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('prompts for confirmation and leaves the photo untouched when deletion is cancelled', async () => {
+    simulateAlert('Cancel')
+    const onPhotoDeleted = jest.fn()
+    renderWithDetailsOpen({ entry: makeEntry({ date: '2026-06-08' }), onPhotoDeleted })
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Delete photo'))
+    })
+
+    expect(mockDeletePhoto).not.toHaveBeenCalled()
+    expect(mockClearPhoto).not.toHaveBeenCalled()
+    expect(onPhotoDeleted).not.toHaveBeenCalled()
+  })
+
+  it('deletes the photo and notifies the caller once deletion is confirmed', async () => {
+    simulateAlert('Delete')
+    const onPhotoDeleted = jest.fn()
+    renderWithDetailsOpen({
+      entry: makeEntry({ date: '2026-06-08', photo_path: '/photos/2026-06-08.jpg' }),
+      onPhotoDeleted,
+    })
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Delete photo'))
+    })
+
+    expect(mockDeletePhoto).toHaveBeenCalledWith('/photos/2026-06-08.jpg')
+    expect(mockClearPhoto).toHaveBeenCalledWith('2026-06-08')
+    expect(onPhotoDeleted).toHaveBeenCalledTimes(1)
   })
 })

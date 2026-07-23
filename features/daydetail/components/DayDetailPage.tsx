@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import { Image, Pressable, StyleSheet } from 'react-native'
+import { formatDateAccessibilityLabel } from '../../../lib/dates'
+import { useDeletePhoto } from '../../../lib/hooks/useDeletePhoto'
 import { DayEntry } from '../../../lib/repositories/day'
 import { useNoteEditor } from '../hooks/useNoteEditor'
-import { formatDateAccessibilityLabel, formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
+import { formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
 import { DateOverlay } from './DateOverlay'
 import { DetailOverlay } from './DetailOverlay'
 import { PageBlur } from './PageBlur'
@@ -15,6 +17,7 @@ type Props = {
   dismissDateOverlay: () => void
   detailOverlayVisible: boolean
   toggleDetailOverlay: () => void
+  onPhotoDeleted: () => void
 }
 
 export function DayDetailPage({
@@ -25,8 +28,10 @@ export function DayDetailPage({
   dismissDateOverlay,
   detailOverlayVisible,
   toggleDetailOverlay,
+  onPhotoDeleted,
 }: Props) {
   const noteEditor = useNoteEditor(entry.date, entry.note_text)
+  const { confirmAndDelete } = useDeletePhoto(entry.date, entry.photo_path!, onPhotoDeleted)
   // Picked once per mount rather than on every render, so it doesn't change
   // while the user is looking at (or clearing) an empty note.
   const [notePlaceholder] = useState(() => pickNotePlaceholder())
@@ -111,6 +116,7 @@ export function DayDetailPage({
           onNoteChangeText={noteEditor.onChangeText}
           onNoteFocus={noteEditor.onFocus}
           onNoteBlur={handleNoteBlur}
+          onDeletePhoto={confirmAndDelete}
           pageHeight={height}
         />
       )}

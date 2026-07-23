@@ -14,6 +14,7 @@ function renderOverlay(overrides: Partial<React.ComponentProps<typeof DetailOver
       onNoteChangeText={noop}
       onNoteFocus={noop}
       onNoteBlur={noop}
+      onDeletePhoto={noop}
       pageHeight={800}
       {...overrides}
     />,
@@ -104,5 +105,14 @@ describe('DetailOverlay', () => {
   it('lets touches pass through to the page below once hidden', () => {
     renderOverlay({ visible: false })
     expect(screen.getByTestId('detail-overlay').props.pointerEvents).toBe('none')
+  })
+
+  it('calls onDeletePhoto when the delete affordance is pressed', () => {
+    const onDeletePhoto = jest.fn()
+    renderOverlay({ onDeletePhoto })
+
+    fireEvent.press(screen.getByLabelText('Delete photo'))
+
+    expect(onDeletePhoto).toHaveBeenCalledTimes(1)
   })
 })
