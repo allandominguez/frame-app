@@ -6,7 +6,7 @@ import { useCapture } from '../useCapture'
 let capturedOnComplete: ((result: CaptureResult) => void) | null = null
 const mockOpenSheet = jest.fn()
 const mockGetDay = jest.fn()
-const mockUpsertDay = jest.fn()
+const mockUpsertDayPhoto = jest.fn()
 const mockDeletePhoto = jest.fn()
 
 jest.mock('../usePhotoPicker', () => ({
@@ -32,7 +32,7 @@ jest.mock('../usePhotoPicker', () => ({
 
 jest.mock('../../../../lib/repositories/day', () => ({
   getDay: (...args: unknown[]) => mockGetDay(...args),
-  upsertDay: (...args: unknown[]) => mockUpsertDay(...args),
+  upsertDayPhoto: (...args: unknown[]) => mockUpsertDayPhoto(...args),
 }))
 
 jest.mock('../../../../lib/storage/photoStorage', () => ({
@@ -154,7 +154,7 @@ describe('useCapture', () => {
       })
 
       expect(mockDeletePhoto).toHaveBeenCalledWith('file://documents/photos/old.jpg')
-      expect(mockUpsertDay).toHaveBeenCalledWith(
+      expect(mockUpsertDayPhoto).toHaveBeenCalledWith(
         expect.objectContaining({ photo_path: 'file://documents/photos/new.jpg' }),
       )
     })
@@ -169,10 +169,9 @@ describe('useCapture', () => {
         await capturedOnComplete!(RESULT)
       })
 
-      expect(mockUpsertDay).toHaveBeenCalledWith({
+      expect(mockUpsertDayPhoto).toHaveBeenCalledWith({
         date: '2026-06-15',
         photo_path: 'file://documents/photos/new.jpg',
-        note_text: null,
         latitude: 37.7749,
         longitude: -122.4194,
         location_name: 'Mission District',
@@ -198,7 +197,7 @@ describe('useCapture', () => {
         })
       })
 
-      expect(mockUpsertDay).toHaveBeenCalledWith(
+      expect(mockUpsertDayPhoto).toHaveBeenCalledWith(
         expect.objectContaining({
           latitude: 37.7749,
           longitude: -122.4194,
@@ -223,7 +222,7 @@ describe('useCapture', () => {
         })
       })
 
-      expect(mockUpsertDay).toHaveBeenCalledWith(
+      expect(mockUpsertDayPhoto).toHaveBeenCalledWith(
         expect.objectContaining({ latitude: null, longitude: null, location_source: null }),
       )
     })

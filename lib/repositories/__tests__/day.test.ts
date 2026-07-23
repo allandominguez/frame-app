@@ -2,10 +2,12 @@ import {
   clearPhoto,
   deleteDay,
   DayEntryInput,
+  DayPhotoInput,
   getAllDays,
   getDay,
   updateNoteText,
   upsertDay,
+  upsertDayPhoto,
 } from '../day'
 
 const mockDayStore = new Map<string, Record<string, unknown>>()
@@ -28,7 +30,7 @@ jest.mock('expo-sqlite', () => ({
       return []
     }),
     runAsync: jest.fn().mockImplementation(async (sql: string, params?: unknown[]) => {
-      if (/insert into day_entries/i.test(sql)) {
+      if (/insert into day_entries/i.test(sql) && params!.length === 11) {
         const [
           date,
           photo_path,
@@ -59,6 +61,44 @@ jest.mock('expo-sqlite', () => ({
           date,
           photo_path,
           note_text,
+          latitude,
+          longitude,
+          location_name,
+          location_source,
+          accent_color,
+          share_color,
+          created_at: existing ? (existing.created_at as string) : created_at,
+          updated_at,
+        })
+      } else if (/insert into day_entries/i.test(sql)) {
+        const [
+          date,
+          photo_path,
+          latitude,
+          longitude,
+          location_name,
+          location_source,
+          accent_color,
+          share_color,
+          created_at,
+          updated_at,
+        ] = params as [
+          string,
+          string | null,
+          number | null,
+          number | null,
+          string | null,
+          string | null,
+          string | null,
+          string | null,
+          string,
+          string,
+        ]
+        const existing = mockDayStore.get(date)
+        mockDayStore.set(date, {
+          date,
+          photo_path,
+          note_text: existing ? (existing.note_text as string | null) : null,
           latitude,
           longitude,
           location_name,
@@ -102,6 +142,18 @@ const makeInput = (overrides: Partial<DayEntryInput> = {}): DayEntryInput => ({
   date: '2026-06-08',
   photo_path: null,
   note_text: null,
+  latitude: null,
+  longitude: null,
+  location_name: null,
+  location_source: null,
+  accent_color: null,
+  share_color: null,
+  ...overrides,
+})
+
+const makePhotoInput = (overrides: Partial<DayPhotoInput> = {}): DayPhotoInput => ({
+  date: '2026-06-08',
+  photo_path: '/photos/2026-06-08.jpg',
   latitude: null,
   longitude: null,
   location_name: null,
@@ -191,6 +243,45 @@ describe('upsertDay', () => {
     const entry = await getDay('2026-06-08')
     expect(entry?.accent_color).toBe('#A3C4F5')
     expect(entry?.share_color).toBe('blue')
+  })
+})
+
+describe('upsertDayPhoto', () => {
+  it('stores a new photo entry with note_text defaulted to null', async () => {
+    await upsertDayPhoto(
+      makePhotoInput({
+        latitude: 51.5074,
+        longitude: -0.1278,
+        location_name: 'London',
+        location_source: 'device',
+      }),
+    )
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.photo_path).toBe('/photos/2026-06-08.jpg')
+    expect(entry?.note_text).toBeNull()
+    expect(entry?.latitude).toBe(51.5074)
+    expect(entry?.location_name).toBe('London')
+  })
+
+  it('preserves an existing note when overwriting a photo on conflict', async () => {
+    await upsertDay(makeInput({ note_text: 'A great day' }))
+
+    await upsertDayPhoto(makePhotoInput({ photo_path: '/photos/new.jpg' }))
+
+    const entry = await getDay('2026-06-08')
+    expect(entry?.note_text).toBe('A great day')
+    expect(entry?.photo_path).toBe('/photos/new.jpg')
+  })
+
+  it('preserves created_at when updating an existing entry', async () => {
+    await upsertDayPhoto(makePhotoInput())
+    const original = await getDay('2026-06-08')
+
+    await upsertDayPhoto(makePhotoInput({ photo_path: '/photos/new.jpg' }))
+    const updated = await getDay('2026-06-08')
+
+    expect(updated?.created_at).toBe(original?.created_at)
   })
 })
 

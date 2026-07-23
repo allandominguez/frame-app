@@ -16,6 +16,8 @@ export type DayEntry = {
 
 export type DayEntryInput = Omit<DayEntry, 'created_at' | 'updated_at'>
 
+export type DayPhotoInput = Omit<DayEntryInput, 'note_text'>
+
 export async function upsertDay(input: DayEntryInput): Promise<void> {
   const db = await openDatabase()
   const now = new Date().toISOString()
@@ -36,6 +38,36 @@ export async function upsertDay(input: DayEntryInput): Promise<void> {
       input.date,
       input.photo_path,
       input.note_text,
+      input.latitude,
+      input.longitude,
+      input.location_name,
+      input.location_source,
+      input.accent_color,
+      input.share_color,
+      now,
+      now,
+    ],
+  )
+}
+
+export async function upsertDayPhoto(input: DayPhotoInput): Promise<void> {
+  const db = await openDatabase()
+  const now = new Date().toISOString()
+  await db.runAsync(
+    `INSERT INTO day_entries (date, photo_path, note_text, latitude, longitude, location_name, location_source, accent_color, share_color, created_at, updated_at)
+     VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(date) DO UPDATE SET
+       photo_path      = excluded.photo_path,
+       latitude        = excluded.latitude,
+       longitude       = excluded.longitude,
+       location_name   = excluded.location_name,
+       location_source = excluded.location_source,
+       accent_color    = excluded.accent_color,
+       share_color     = excluded.share_color,
+       updated_at      = excluded.updated_at`,
+    [
+      input.date,
+      input.photo_path,
       input.latitude,
       input.longitude,
       input.location_name,
