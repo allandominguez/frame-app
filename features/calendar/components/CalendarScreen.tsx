@@ -36,7 +36,6 @@ export function CalendarScreen({ navigation }: Props) {
 
   const {
     displayMonths,
-    currentIndex,
     pageHeight,
     setPageHeight,
     flatListRef,
@@ -46,10 +45,6 @@ export function CalendarScreen({ navigation }: Props) {
     viewabilityConfig,
   } = useMonthPager(months)
 
-  // displayMonths is ascending (oldest first), so the current month is always last —
-  // the button only makes sense there, since it always targets today specifically.
-  // Swiping to a past month showing a different control is a separate, deferred item.
-  const isViewingCurrentMonth = currentIndex === displayMonths.length - 1
   const todayHasPhoto = Boolean(entriesByDate[today]?.photo_path)
 
   // Tracked separately from useCapture's internal target so the sheet's allowCamera
@@ -112,7 +107,12 @@ export function CalendarScreen({ navigation }: Props) {
             extraData={entriesByDate}
             initialScrollIndex={displayMonths.length - 1}
             keyExtractor={(item) => `${item.year}-${item.month}`}
-            renderItem={({ item }) => (
+            // displayMonths is ascending (oldest first), so the current month is always
+            // the last item — rendering the capture button as part of that page's own
+            // content (rather than a conditionally-mounted sibling keyed off scroll
+            // position) means it scrolls away naturally with the page instead of causing
+            // the list container to reflow on every month swipe.
+            renderItem={({ item, index }) => (
               <View style={[styles.page, { height: pageHeight }]}>
                 <View style={styles.pageHeader}>
                   <View {...monthPanHandlers} accessibilityRole="header">
@@ -133,6 +133,22 @@ export function CalendarScreen({ navigation }: Props) {
                     if (photoPath) openDayActionMenu(date, photoPath)
                   }}
                 />
+                {index === displayMonths.length - 1 && (
+                  <Pressable
+                    style={styles.captureTodayButton}
+                    onPress={handleCaptureTodayPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      todayHasPhoto ? "Replace today's photo" : "Add today's photo"
+                    }
+                  >
+                    {todayHasPhoto ? (
+                      <IconArrowForwardUp size={22} color={Colors.textPrimary} />
+                    ) : (
+                      <IconPlus size={22} color={Colors.textPrimary} />
+                    )}
+                  </Pressable>
+                )}
               </View>
             )}
             pagingEnabled
@@ -153,20 +169,6 @@ export function CalendarScreen({ navigation }: Props) {
           />
         )}
       </View>
-      {isViewingCurrentMonth && (
-        <Pressable
-          style={styles.captureTodayButton}
-          onPress={handleCaptureTodayPress}
-          accessibilityRole="button"
-          accessibilityLabel={todayHasPhoto ? "Replace today's photo" : "Add today's photo"}
-        >
-          {todayHasPhoto ? (
-            <IconArrowForwardUp size={22} color={Colors.textPrimary} />
-          ) : (
-            <IconPlus size={22} color={Colors.textPrimary} />
-          )}
-        </Pressable>
-      )}
       {longestStreak > 0 && (
         <View style={styles.streakRow}>
           {currentStreak > 0 && (
@@ -212,6 +214,7 @@ const styles = StyleSheet.create({
   },
   captureTodayButton: {
     alignSelf: 'center',
+    marginTop: Spacing.xl,
     width: 44,
     height: 44,
     borderRadius: Radii.full,
