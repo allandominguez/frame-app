@@ -80,5 +80,17 @@ export function useCapture(onSaved?: (date: string) => void) {
     pickerResult.openSheet()
   }
 
-  return { ...pickerResult, openSheet }
+  // Abandoning the sheet (backdrop tap, hardware back, Cancel) without completing a
+  // capture must drop any pending replacement confirmation — otherwise a later press
+  // for the same date skips the confirmation alert even though nothing was replaced.
+  const onDismiss = () => {
+    setConfirmedReplacement(null)
+    pickerResult.sheetProps.onDismiss()
+  }
+
+  return {
+    ...pickerResult,
+    openSheet,
+    sheetProps: { ...pickerResult.sheetProps, onDismiss },
+  }
 }

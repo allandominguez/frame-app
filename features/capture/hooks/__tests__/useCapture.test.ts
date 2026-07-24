@@ -8,6 +8,7 @@ const mockOpenSheet = jest.fn()
 const mockGetDay = jest.fn()
 const mockUpsertDayPhoto = jest.fn()
 const mockDeletePhoto = jest.fn()
+const mockUnderlyingDismiss = jest.fn()
 
 jest.mock('../usePhotoPicker', () => ({
   usePhotoPicker: (onCaptureComplete: (result: CaptureResult) => void | Promise<void>) => {
@@ -24,7 +25,7 @@ jest.mock('../usePhotoPicker', () => ({
         visible: false,
         onTakePhoto: jest.fn(),
         onChooseFromGallery: jest.fn(),
-        onDismiss: jest.fn(),
+        onDismiss: mockUnderlyingDismiss,
       },
     }
   },
@@ -125,6 +126,28 @@ describe('useCapture', () => {
 
       expect(alertSpy).toHaveBeenCalledTimes(1)
       expect(mockOpenSheet).toHaveBeenCalledTimes(2)
+    })
+
+    it('prompts again after the sheet is dismissed without completing a replacement', async () => {
+      mockGetDay.mockResolvedValue({ photo_path: 'file://documents/photos/old.jpg' })
+      const alertSpy = jest.spyOn(Alert, 'alert')
+      simulateAlert('Replace')
+      const { result } = renderHook(() => useCapture())
+
+      await act(async () => {
+        await result.current.openSheet('2026-06-15')
+      })
+      act(() => {
+        result.current.sheetProps.onDismiss()
+      })
+
+      simulateAlert('Replace')
+      await act(async () => {
+        await result.current.openSheet('2026-06-15')
+      })
+
+      expect(mockUnderlyingDismiss).toHaveBeenCalled()
+      expect(alertSpy).toHaveBeenCalledTimes(2)
     })
 
     it('prompts again when switching to a different date that also has a photo', async () => {
