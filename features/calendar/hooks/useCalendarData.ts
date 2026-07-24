@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { DayEntry, getAllDays } from '../../../lib/repositories/day'
 import { computeStreaks } from '../streaks'
 import { MonthData } from '../types'
@@ -19,16 +19,16 @@ export function useCalendarData(): CalendarData {
   const [today, setToday] = useState(() => new Date().toISOString().slice(0, 10))
   const [isLoading, setIsLoading] = useState(true)
 
+  // No mount-effect here — CalendarScreen's useFocusEffect already calls refresh()
+  // on initial focus, which fires on mount too. A second effect here previously
+  // caused two concurrent getAllDays() calls on the shared SQLite connection,
+  // a confirmed cause of a native NullPointerException on Android.
   const load = useCallback(async () => {
     setToday(new Date().toISOString().slice(0, 10))
     const all = await getAllDays()
     setEntries(all)
     setIsLoading(false)
   }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const entriesByDate = useMemo(
     () => Object.fromEntries(entries.map((e) => [e.date, e])),
