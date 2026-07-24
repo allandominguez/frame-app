@@ -1,9 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { useCallback } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { IconArrowForwardUp, IconPlus } from '@tabler/icons-react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Colors, Spacing, Typography } from '../../../lib/design'
+import { PhotoPickerSheet } from '../../capture/components/PhotoPickerSheet'
+import { PhotoPreview } from '../../capture/components/PhotoPreview'
+import { useCapture } from '../../capture/hooks/useCapture'
+import { Colors, Radii, Spacing, Typography } from '../../../lib/design'
 import { RootStackParamList } from '../../../navigation/types'
 import { useCalendarData } from '../hooks/useCalendarData'
 import { useDayActionMenu } from '../hooks/useDayActionMenu'
@@ -14,6 +18,17 @@ import { DayActionMenu } from './DayActionMenu'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>
 
+function alertPermissionBlocked() {
+  Alert.alert(
+    'Permission needed',
+    'Frame needs access to your camera or photos to add a picture. You can enable this in Settings.',
+    [
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => Linking.openSettings() },
+    ],
+  )
+}
+
 export function CalendarScreen({ navigation }: Props) {
   const { entriesByDate, months, today, currentStreak, longestStreak, isLoading, refresh } =
     useCalendarData()
@@ -21,6 +36,7 @@ export function CalendarScreen({ navigation }: Props) {
 
   const {
     displayMonths,
+    currentIndex,
     pageHeight,
     setPageHeight,
     flatListRef,
@@ -30,11 +46,48 @@ export function CalendarScreen({ navigation }: Props) {
     viewabilityConfig,
   } = useMonthPager(months)
 
+  // displayMonths is ascending (oldest first), so the current month is always last —
+  // the button only makes sense there, since it always targets today specifically.
+  // Swiping to a past month showing a different control is a separate, deferred item.
+  const isViewingCurrentMonth = currentIndex === displayMonths.length - 1
+  const todayHasPhoto = Boolean(entriesByDate[today]?.photo_path)
+
+  // Tracked separately from useCapture's internal target so the sheet's allowCamera
+  // can be derived here, where "today" is already known — capture itself doesn't
+  // need to care which date it's serving beyond the one passed to openSheet.
+  const [captureDate, setCaptureDate] = useState<string | null>(null)
+  // Landing on the entry right after capture (rather than back on the calendar)
+  // matches the natural next step — add a note, see the location — and means the
+  // calendar only needs to catch up via its existing focus-refetch when the user
+  // eventually backs out, not a separate manual refresh here.
+  const capture = useCapture((date) => navigation.navigate('DayDetail', { date }))
+
+  useEffect(() => {
+    if (capture.permissionBlocked) alertPermissionBlocked()
+  }, [capture.permissionBlocked])
+
   useFocusEffect(
     useCallback(() => {
       refresh()
     }, [refresh]),
   )
+
+  const handleDayPress = (date: string) => {
+    if (entriesByDate[date]?.photo_path) {
+      navigation.navigate('DayDetail', { date })
+      return
+    }
+    setCaptureDate(date)
+    capture.openSheet(date)
+  }
+
+  // Unlike handleDayPress, this always targets today regardless of whether today
+  // already has a photo — openSheet's existing replace-confirmation flow (alert,
+  // then delete-old-only-after-new-is-confirmed) handles that case for free.
+  const handleCaptureTodayPress = () => {
+    setCaptureDate(today)
+    capture.openSheet(today)
+  }
 
   if (isLoading || displayMonths.length === 0) {
     return <SafeAreaView style={styles.root} />
@@ -74,7 +127,7 @@ export function CalendarScreen({ navigation }: Props) {
                   month={item.month}
                   entriesByDate={entriesByDate}
                   today={today}
-                  onDayPress={(date) => navigation.navigate('DayDetail', { date })}
+                  onDayPress={handleDayPress}
                   onDayLongPress={(date) => {
                     const photoPath = entriesByDate[date]?.photo_path
                     if (photoPath) openDayActionMenu(date, photoPath)
@@ -100,6 +153,20 @@ export function CalendarScreen({ navigation }: Props) {
           />
         )}
       </View>
+      {isViewingCurrentMonth && (
+        <Pressable
+          style={styles.captureTodayButton}
+          onPress={handleCaptureTodayPress}
+          accessibilityRole="button"
+          accessibilityLabel={todayHasPhoto ? "Replace today's photo" : "Add today's photo"}
+        >
+          {todayHasPhoto ? (
+            <IconArrowForwardUp size={22} color={Colors.textPrimary} />
+          ) : (
+            <IconPlus size={22} color={Colors.textPrimary} />
+          )}
+        </Pressable>
+      )}
       {longestStreak > 0 && (
         <View style={styles.streakRow}>
           {currentStreak > 0 && (
@@ -121,6 +188,13 @@ export function CalendarScreen({ navigation }: Props) {
           onDeleted={refresh}
         />
       )}
+      <PhotoPickerSheet {...capture.sheetProps} allowCamera={captureDate === today} />
+      <PhotoPreview
+        uri={capture.pendingUri}
+        isSaving={capture.isSaving}
+        onConfirm={capture.onConfirmPhoto}
+        onCancel={capture.onCancelPreview}
+      />
     </SafeAreaView>
   )
 }
@@ -135,6 +209,16 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  captureTodayButton: {
+    alignSelf: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   page: {
     justifyContent: 'center',

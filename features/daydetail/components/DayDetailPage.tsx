@@ -94,7 +94,7 @@ export function DayDetailPage({
       <Image
         source={{ uri: entry.photo_path! }}
         style={styles.photo}
-        resizeMode="cover"
+        resizeMode="contain"
         accessibilityLabel={`Photo from ${formatDateAccessibilityLabel(entry.date)}`}
         accessibilityRole="image"
       />

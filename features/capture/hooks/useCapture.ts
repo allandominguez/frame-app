@@ -7,25 +7,34 @@ import { usePhotoPicker } from './usePhotoPicker'
 
 function confirmReplacement(): Promise<boolean> {
   return new Promise((resolve) => {
-    Alert.alert("Replace today's photo?", 'Your current photo will be permanently deleted.', [
+    Alert.alert("Replace this day's photo?", 'Your current photo will be permanently deleted.', [
       { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
       { text: 'Replace', style: 'destructive', onPress: () => resolve(true) },
     ])
   })
 }
 
-export function useCapture() {
-  const [existingPhotoPath, setExistingPhotoPath] = useState<string | null>(null)
+// A single hook instance serves capture requests for any date — the calendar taps into
+// it once for whichever cell (or the dedicated "today" button) the user pressed — so the
+// in-flight target date travels with the request rather than being fixed at hook creation.
+export function useCapture(onSaved?: (date: string) => void) {
+  const [targetDate, setTargetDate] = useState<string | null>(null)
+  const [confirmedReplacement, setConfirmedReplacement] = useState<{
+    date: string
+    photoPath: string
+  } | null>(null)
 
   const onCaptureComplete = async (result: CaptureResult) => {
-    if (existingPhotoPath) {
-      deletePhoto(existingPhotoPath)
-      setExistingPhotoPath(null)
+    if (!targetDate) return
+
+    if (confirmedReplacement?.date === targetDate) {
+      deletePhoto(confirmedReplacement.photoPath)
+      setConfirmedReplacement(null)
     }
 
     const coords = result.exifGps ?? result.deviceGps
     await upsertDayPhoto({
-      date: new Date().toISOString().slice(0, 10),
+      date: targetDate,
       photo_path: result.localPath,
       latitude: coords?.latitude ?? null,
       longitude: coords?.longitude ?? null,
@@ -34,24 +43,38 @@ export function useCapture() {
       accent_color: null,
       share_color: null,
     })
+
+    onSaved?.(targetDate)
   }
 
   const pickerResult = usePhotoPicker(onCaptureComplete)
 
-  const openSheet = async () => {
-    // Already confirmed replacement in this session — open directly without re-prompting
-    if (existingPhotoPath !== null) {
+  const openSheet = async (date: string) => {
+    // Diagnostic trail for an intermittent, not-yet-reproduced report that the sheet
+    // stops reopening after several rapid open/dismiss cycles — remove once either a
+    // reliable repro or a root cause is confirmed.
+    if (__DEV__) {
+      console.log('[useCapture] openSheet called', {
+        date,
+        previousTargetDate: targetDate,
+        sheetVisibleBefore: pickerResult.sheetVisible,
+      })
+    }
+
+    setTargetDate(date)
+
+    // Already confirmed replacement for this date in this session — open directly without re-prompting
+    if (confirmedReplacement?.date === date) {
       pickerResult.openSheet()
       return
     }
 
-    const today = new Date().toISOString().slice(0, 10)
-    const existing = await getDay(today)
+    const existing = await getDay(date)
 
     if (existing?.photo_path) {
       const confirmed = await confirmReplacement()
       if (!confirmed) return
-      setExistingPhotoPath(existing.photo_path)
+      setConfirmedReplacement({ date, photoPath: existing.photo_path })
     }
 
     pickerResult.openSheet()

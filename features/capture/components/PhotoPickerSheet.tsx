@@ -3,12 +3,21 @@ import { Colors, Spacing, Typography } from '../../../lib/design'
 
 type Props = {
   visible: boolean
+  // A past day can only be backfilled from an existing photo — a camera shot taken
+  // "now" can't represent a day that's already gone, so the option is hidden entirely.
+  allowCamera: boolean
   onTakePhoto: () => void
   onChooseFromGallery: () => void
   onDismiss: () => void
 }
 
-export function PhotoPickerSheet({ visible, onTakePhoto, onChooseFromGallery, onDismiss }: Props) {
+export function PhotoPickerSheet({
+  visible,
+  allowCamera,
+  onTakePhoto,
+  onChooseFromGallery,
+  onDismiss,
+}: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss}>
       <View style={styles.container}>
@@ -19,17 +28,23 @@ export function PhotoPickerSheet({ visible, onTakePhoto, onChooseFromGallery, on
           accessibilityRole="button"
         />
         <View style={styles.sheet}>
-          <Text style={styles.title}>Add today's photo</Text>
+          <Text style={styles.title}>
+            {allowCamera ? "Add today's photo" : 'Add photo for this day'}
+          </Text>
           <View style={styles.divider} />
-          <Pressable
-            style={styles.option}
-            onPress={onTakePhoto}
-            accessibilityRole="button"
-            accessibilityLabel="Take photo"
-          >
-            <Text style={styles.optionText}>Take photo</Text>
-          </Pressable>
-          <View style={styles.divider} />
+          {allowCamera && (
+            <>
+              <Pressable
+                style={styles.option}
+                onPress={onTakePhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Take photo"
+              >
+                <Text style={styles.optionText}>Take photo</Text>
+              </Pressable>
+              <View style={styles.divider} />
+            </>
+          )}
           <Pressable
             style={styles.option}
             onPress={onChooseFromGallery}

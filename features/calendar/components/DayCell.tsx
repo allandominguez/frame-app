@@ -45,10 +45,23 @@ export function DayCell({ cell, size, onPress, onLongPress }: Props) {
     )
   }
 
+  if (cell.isFuture) {
+    return (
+      <View style={cellStyle}>
+        <Text style={dayNumStyle}>{cell.dayNumber}</Text>
+      </View>
+    )
+  }
+
   return (
-    <View style={cellStyle}>
+    <Pressable
+      style={cellStyle}
+      onPress={() => onPress(cell.date!)}
+      accessibilityRole="button"
+      accessibilityLabel={`${cell.dayNumber}, add photo`}
+    >
       <Text style={dayNumStyle}>{cell.dayNumber}</Text>
-    </View>
+    </Pressable>
   )
 }
 
