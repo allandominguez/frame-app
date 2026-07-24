@@ -245,5 +245,19 @@ describe('useCapture', () => {
         expect.objectContaining({ latitude: null, longitude: null, location_source: null }),
       )
     })
+
+    it('calls onSaved with the target date once the entry is persisted', async () => {
+      const onSaved = jest.fn()
+      const { result } = renderHook(() => useCapture(onSaved))
+
+      await act(async () => {
+        await result.current.openSheet('2026-06-15')
+      })
+      await act(async () => {
+        await capturedOnComplete!(RESULT)
+      })
+
+      expect(onSaved).toHaveBeenCalledWith('2026-06-15')
+    })
   })
 })

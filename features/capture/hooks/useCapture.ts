@@ -17,7 +17,7 @@ function confirmReplacement(): Promise<boolean> {
 // A single hook instance serves capture requests for any date — the calendar taps into
 // it once for whichever cell (or the dedicated "today" button) the user pressed — so the
 // in-flight target date travels with the request rather than being fixed at hook creation.
-export function useCapture() {
+export function useCapture(onSaved?: (date: string) => void) {
   const [targetDate, setTargetDate] = useState<string | null>(null)
   const [confirmedReplacement, setConfirmedReplacement] = useState<{
     date: string
@@ -43,6 +43,8 @@ export function useCapture() {
       accent_color: null,
       share_color: null,
     })
+
+    onSaved?.(targetDate)
   }
 
   const pickerResult = usePhotoPicker(onCaptureComplete)

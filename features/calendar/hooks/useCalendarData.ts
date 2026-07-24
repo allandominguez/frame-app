@@ -14,6 +14,9 @@ type CalendarData = {
   refresh: () => void
 }
 
+// The initial load is triggered by the consumer's useFocusEffect, not an effect in here —
+// useFocusEffect already fires on first mount as well as every later focus, so a second,
+// separate mount-time fetch here would just race it on the same shared SQLite connection.
 export function useCalendarData(): CalendarData {
   const [entries, setEntries] = useState<DayEntry[]>([])
   const [today, setToday] = useState(() => new Date().toISOString().slice(0, 10))
