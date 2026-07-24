@@ -1,8 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { IconArrowForwardUp, IconPlus } from '@tabler/icons-react-native'
-import { useCallback, useEffect, useState } from 'react'
-import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { IconArrowBarToDown, IconArrowForwardUp, IconPlus } from '@tabler/icons-react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Alert, Animated, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { PhotoPickerSheet } from '../../capture/components/PhotoPickerSheet'
 import { PhotoPreview } from '../../capture/components/PhotoPreview'
@@ -36,6 +36,7 @@ export function CalendarScreen({ navigation }: Props) {
 
   const {
     displayMonths,
+    currentIndex,
     pageHeight,
     setPageHeight,
     flatListRef,
@@ -44,6 +45,23 @@ export function CalendarScreen({ navigation }: Props) {
     onViewableItemsChanged,
     viewabilityConfig,
   } = useMonthPager(months)
+
+  // displayMonths is ascending (oldest first), so the current month is always last.
+  const isViewingCurrentMonth = currentIndex === displayMonths.length - 1
+
+  // 0 = showing the streak counter, 1 = showing the jump-back control. Both stay
+  // mounted (see the footer below) and crossfade via this shared value rather than
+  // hard-cutting between them.
+  const footerTransition = useRef(new Animated.Value(isViewingCurrentMonth ? 0 : 1)).current
+  useEffect(() => {
+    const animation = Animated.timing(footerTransition, {
+      toValue: isViewingCurrentMonth ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    })
+    animation.start()
+    return () => animation.stop()
+  }, [isViewingCurrentMonth, footerTransition])
 
   const todayHasPhoto = Boolean(entriesByDate[today]?.photo_path)
 
@@ -84,6 +102,10 @@ export function CalendarScreen({ navigation }: Props) {
     capture.openSheet(today)
   }
 
+  const handleJumpToCurrentMonth = () => {
+    flatListRef.current?.scrollToIndex({ index: displayMonths.length - 1, animated: true })
+  }
+
   if (isLoading || displayMonths.length === 0) {
     return <SafeAreaView style={styles.root} />
   }
@@ -107,11 +129,10 @@ export function CalendarScreen({ navigation }: Props) {
             extraData={entriesByDate}
             initialScrollIndex={displayMonths.length - 1}
             keyExtractor={(item) => `${item.year}-${item.month}`}
-            // displayMonths is ascending (oldest first), so the current month is always
-            // the last item — rendering the capture button as part of that page's own
-            // content (rather than a conditionally-mounted sibling keyed off scroll
-            // position) means it scrolls away naturally with the page instead of causing
-            // the list container to reflow on every month swipe.
+            // The current month is always the last item — rendering the capture button
+            // as part of that page's own content (rather than a conditionally-mounted
+            // sibling keyed off scroll position) means it scrolls away naturally with the
+            // page instead of causing the list container to reflow on every month swipe.
             renderItem={({ item, index }) => (
               <View style={[styles.page, { height: pageHeight }]}>
                 <View style={styles.pageHeader}>
@@ -169,19 +190,47 @@ export function CalendarScreen({ navigation }: Props) {
           />
         )}
       </View>
-      {longestStreak > 0 && (
-        <View style={styles.streakRow}>
-          {currentStreak > 0 && (
+      {/* Always mounted at a fixed height, unlike the capture button — only its content
+          crossfades between the streak counter and the jump-back control depending on
+          which month is in view, so this footer never itself moves or reflows the list
+          above it. Both states stay mounted so they can fade into one another instead of
+          hard-cutting; pointerEvents keeps the faded-out one from intercepting touches. */}
+      <View style={styles.footerRow}>
+        <Animated.View
+          style={[
+            styles.footerLayer,
+            { opacity: footerTransition.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) },
+          ]}
+          pointerEvents={isViewingCurrentMonth ? 'auto' : 'none'}
+        >
+          {longestStreak > 0 && (
             <>
-              <Text style={styles.streakText}>
-                {currentStreak} {currentStreak === 1 ? 'day' : 'days'}
-              </Text>
-              <Text style={styles.streakSeparator}>·</Text>
+              {currentStreak > 0 && (
+                <>
+                  <Text style={styles.streakText}>
+                    {currentStreak} {currentStreak === 1 ? 'day' : 'days'}
+                  </Text>
+                  <Text style={styles.streakSeparator}>·</Text>
+                </>
+              )}
+              <Text style={styles.streakText}>Best {longestStreak}</Text>
             </>
           )}
-          <Text style={styles.streakText}>Best {longestStreak}</Text>
-        </View>
-      )}
+        </Animated.View>
+        <Animated.View
+          style={[styles.footerLayer, { opacity: footerTransition }]}
+          pointerEvents={isViewingCurrentMonth ? 'none' : 'auto'}
+        >
+          <Pressable
+            onPress={handleJumpToCurrentMonth}
+            accessibilityRole="button"
+            accessibilityLabel="Jump to current month"
+            hitSlop={12}
+          >
+            <IconArrowBarToDown size={18} color={Colors.textTertiary} />
+          </Pressable>
+        </Animated.View>
+      </View>
       {target && (
         <DayActionMenu
           date={target.date}
@@ -241,12 +290,19 @@ const styles = StyleSheet.create({
     ...Typography.displayMd,
     color: Colors.textSecondary,
   },
-  streakRow: {
+  footerRow: {
+    paddingVertical: Spacing.md,
+    // Fixed regardless of content (streak text, jump-back icon, or nothing when there's
+    // no streak yet) so this row's height — and therefore the list above it — never
+    // changes as its content swaps.
+    minHeight: 18 + Spacing.md * 2,
+  },
+  footerLayer: {
+    ...StyleSheet.absoluteFillObject,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.xs,
-    paddingVertical: Spacing.md,
   },
   streakText: {
     ...Typography.labelXs,

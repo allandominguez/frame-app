@@ -300,6 +300,25 @@ describe('CalendarScreen', () => {
     })
   })
 
+  describe('month footer', () => {
+    // FlatList's virtualization only mounts the page around initialScrollIndex in this
+    // test environment (no real scroll/momentum to widen the render window), so swiping
+    // to a past month isn't reachable here — that swap is covered by the work item's
+    // manual testing steps instead. This test sticks to what mounts on the current month:
+    // the streak counter should be showing, and the jump-back control — always mounted
+    // underneath it so the two can crossfade — should be non-interactive.
+    it('shows the streak counter on the current month, with the jump-back control non-interactive', async () => {
+      mockStore = [makeEntry('2026-07-22')]
+      await renderScreen()
+
+      expect(screen.getByText('Best 1')).toBeTruthy()
+      const jumpBackButton = screen.getByLabelText('Jump to current month')
+      // Three levels up from the Pressable's own host view is the crossfading
+      // Animated.View layer that carries pointerEvents.
+      expect(jumpBackButton.parent?.parent?.parent?.props.pointerEvents).toBe('none')
+    })
+  })
+
   describe('delete flow', () => {
     // Note: react-test-renderer's FlatList doesn't reproduce the native cell-recycling
     // behavior that motivated adding `extraData` to the real component, so this test
