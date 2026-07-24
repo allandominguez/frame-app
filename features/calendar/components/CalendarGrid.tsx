@@ -10,9 +10,17 @@ type Props = {
   entriesByDate: Record<string, DayEntry>
   today: string
   onDayPress: (date: string) => void
+  onDayLongPress: (date: string) => void
 }
 
-export function CalendarGrid({ year, month, entriesByDate, today, onDayPress }: Props) {
+export function CalendarGrid({
+  year,
+  month,
+  entriesByDate,
+  today,
+  onDayPress,
+  onDayLongPress,
+}: Props) {
   const { width } = useWindowDimensions()
   const cellSize = (width - Spacing.lg * 2) / 7
   const cells = buildMonthCells(year, month, entriesByDate, today)
@@ -25,6 +33,7 @@ export function CalendarGrid({ year, month, entriesByDate, today, onDayPress }: 
           cell={cell}
           size={cellSize}
           onPress={onDayPress}
+          onLongPress={onDayLongPress}
         />
       ))}
     </View>

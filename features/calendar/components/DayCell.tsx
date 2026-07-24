@@ -3,14 +3,18 @@ import { Colors, Radii, Typography } from '../../../lib/design'
 import { CalendarDayData } from '../types'
 
 const CELL_HEIGHT = 52
+// RN's Pressable defaults to 500ms before a long press registers — noticeably
+// sluggish for a menu trigger. 300ms still comfortably clears a normal tap.
+const LONG_PRESS_DELAY_MS = 300
 
 type Props = {
   cell: CalendarDayData
   size: number
   onPress: (date: string) => void
+  onLongPress: (date: string) => void
 }
 
-export function DayCell({ cell, size, onPress }: Props) {
+export function DayCell({ cell, size, onPress, onLongPress }: Props) {
   const cellStyle = [styles.cell, { width: size, height: CELL_HEIGHT }]
   const dayNumStyle = [
     styles.dayNumber,
@@ -27,6 +31,8 @@ export function DayCell({ cell, size, onPress }: Props) {
       <Pressable
         style={cellStyle}
         onPress={() => onPress(cell.date!)}
+        onLongPress={() => onLongPress(cell.date!)}
+        delayLongPress={LONG_PRESS_DELAY_MS}
         accessibilityRole="button"
         accessibilityLabel={`${cell.dayNumber}, has photo`}
       >
