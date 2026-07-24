@@ -85,7 +85,7 @@ jest.mock('../../../../lib/location/reverseGeocode', () => ({
   reverseGeocode: jest.fn(),
 }))
 
-function simulateAlert(choice: 'Cancel' | 'Delete') {
+function simulateAlert(choice: 'Cancel' | 'Delete' | 'Replace') {
   return jest.spyOn(Alert, 'alert').mockImplementationOnce((_title, _message, buttons) => {
     const btn = (buttons as AlertButton[]).find((b) => b.text === choice)
     btn?.onPress?.()
@@ -242,6 +242,60 @@ describe('CalendarScreen', () => {
         'Permission needed',
         expect.stringContaining('Settings'),
         expect.any(Array),
+      )
+    })
+  })
+
+  describe('capture today button', () => {
+    it('opens the capture sheet with the camera option when today has no photo', async () => {
+      await renderScreen()
+
+      await pressCell("Add today's photo")
+
+      expect(screen.getByText("Add today's photo")).toBeTruthy()
+      expect(screen.getByLabelText('Take photo')).toBeTruthy()
+    })
+
+    it('prompts for confirmation before replacing when today already has a photo', async () => {
+      mockStore = [makeEntry('2026-07-22', '/photos/today.jpg')]
+      mockGetDay.mockResolvedValue({ photo_path: '/photos/today.jpg' })
+      const alertSpy = simulateAlert('Cancel')
+      await renderScreen()
+
+      await pressCell("Replace today's photo")
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        "Replace this day's photo?",
+        'Your current photo will be permanently deleted.',
+        expect.any(Array),
+      )
+    })
+
+    it('deletes the old photo only after the new one is confirmed', async () => {
+      mockStore = [makeEntry('2026-07-22', '/photos/old.jpg')]
+      mockGetDay.mockResolvedValue({ photo_path: '/photos/old.jpg' })
+      simulateAlert('Replace')
+      mockRequestMediaLibraryPermission.mockResolvedValue('granted')
+      mockLaunchImageLibraryAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'content://gallery/new.jpg', exif: undefined }],
+      })
+      mockSavePhoto.mockResolvedValue('file://documents/photos/new.jpg')
+      await renderScreen()
+
+      await pressCell("Replace today's photo")
+      await press('Choose from gallery')
+
+      expect(mockDeletePhoto).not.toHaveBeenCalled()
+
+      await press('Use photo')
+
+      expect(mockDeletePhoto).toHaveBeenCalledWith('/photos/old.jpg')
+      expect(mockUpsertDayPhoto).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: '2026-07-22',
+          photo_path: 'file://documents/photos/new.jpg',
+        }),
       )
     })
   })

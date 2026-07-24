@@ -1,12 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { IconArrowForwardUp, IconPlus } from '@tabler/icons-react-native'
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, FlatList, Linking, StyleSheet, Text, View } from 'react-native'
+import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { PhotoPickerSheet } from '../../capture/components/PhotoPickerSheet'
 import { PhotoPreview } from '../../capture/components/PhotoPreview'
 import { useCapture } from '../../capture/hooks/useCapture'
-import { Colors, Spacing, Typography } from '../../../lib/design'
+import { Colors, Radii, Spacing, Typography } from '../../../lib/design'
 import { RootStackParamList } from '../../../navigation/types'
 import { useCalendarData } from '../hooks/useCalendarData'
 import { useDayActionMenu } from '../hooks/useDayActionMenu'
@@ -35,6 +36,7 @@ export function CalendarScreen({ navigation }: Props) {
 
   const {
     displayMonths,
+    currentIndex,
     pageHeight,
     setPageHeight,
     flatListRef,
@@ -43,6 +45,12 @@ export function CalendarScreen({ navigation }: Props) {
     onViewableItemsChanged,
     viewabilityConfig,
   } = useMonthPager(months)
+
+  // displayMonths is ascending (oldest first), so the current month is always last —
+  // the button only makes sense there, since it always targets today specifically.
+  // Swiping to a past month showing a different control is a separate, deferred item.
+  const isViewingCurrentMonth = currentIndex === displayMonths.length - 1
+  const todayHasPhoto = Boolean(entriesByDate[today]?.photo_path)
 
   // Tracked separately from useCapture's internal target so the sheet's allowCamera
   // can be derived here, where "today" is already known — capture itself doesn't
@@ -71,6 +79,14 @@ export function CalendarScreen({ navigation }: Props) {
     }
     setCaptureDate(date)
     capture.openSheet(date)
+  }
+
+  // Unlike handleDayPress, this always targets today regardless of whether today
+  // already has a photo — openSheet's existing replace-confirmation flow (alert,
+  // then delete-old-only-after-new-is-confirmed) handles that case for free.
+  const handleCaptureTodayPress = () => {
+    setCaptureDate(today)
+    capture.openSheet(today)
   }
 
   if (isLoading || displayMonths.length === 0) {
@@ -137,6 +153,20 @@ export function CalendarScreen({ navigation }: Props) {
           />
         )}
       </View>
+      {isViewingCurrentMonth && (
+        <Pressable
+          style={styles.captureTodayButton}
+          onPress={handleCaptureTodayPress}
+          accessibilityRole="button"
+          accessibilityLabel={todayHasPhoto ? "Replace today's photo" : "Add today's photo"}
+        >
+          {todayHasPhoto ? (
+            <IconArrowForwardUp size={22} color={Colors.textPrimary} />
+          ) : (
+            <IconPlus size={22} color={Colors.textPrimary} />
+          )}
+        </Pressable>
+      )}
       {longestStreak > 0 && (
         <View style={styles.streakRow}>
           {currentStreak > 0 && (
@@ -179,6 +209,16 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  captureTodayButton: {
+    alignSelf: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   page: {
     justifyContent: 'center',
