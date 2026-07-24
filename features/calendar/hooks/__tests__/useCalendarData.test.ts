@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native'
+import { act, renderHook, waitFor } from '@testing-library/react-native'
 import { DayEntry } from '../../../../lib/repositories/day'
 import { useCalendarData } from '../useCalendarData'
 
@@ -31,16 +31,23 @@ describe('useCalendarData', () => {
     getAllDays.mockReset()
   })
 
-  it('starts in loading state and resolves after fetch', async () => {
+  it('starts in loading state until refresh is called', async () => {
     getAllDays.mockResolvedValue([])
     const { result } = renderHook(() => useCalendarData())
     expect(result.current.isLoading).toBe(true)
+
+    await act(async () => {
+      await result.current.refresh()
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
   })
 
   it('groups entries by date', async () => {
     getAllDays.mockResolvedValue([makeEntry('2026-07-16'), makeEntry('2026-07-15')])
     const { result } = renderHook(() => useCalendarData())
+    await act(async () => {
+      await result.current.refresh()
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.entriesByDate['2026-07-16']).toBeDefined()
     expect(result.current.entriesByDate['2026-07-15']).toBeDefined()
@@ -49,6 +56,9 @@ describe('useCalendarData', () => {
   it('exposes today as a YYYY-MM-DD string', async () => {
     getAllDays.mockResolvedValue([])
     const { result } = renderHook(() => useCalendarData())
+    await act(async () => {
+      await result.current.refresh()
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.today).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
@@ -57,6 +67,9 @@ describe('useCalendarData', () => {
     // getAllDays returns DESC; oldest is last. 2025-12 is more than 6 months before July 2026.
     getAllDays.mockResolvedValue([makeEntry('2026-07-16'), makeEntry('2025-12-01')])
     const { result } = renderHook(() => useCalendarData())
+    await act(async () => {
+      await result.current.refresh()
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.months[0]).toEqual({ year: 2025, month: 12 })
   })
@@ -64,6 +77,9 @@ describe('useCalendarData', () => {
   it('shows at least 6 months when there are no entries', async () => {
     getAllDays.mockResolvedValue([])
     const { result } = renderHook(() => useCalendarData())
+    await act(async () => {
+      await result.current.refresh()
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.months.length).toBeGreaterThanOrEqual(6)
   })
@@ -72,6 +88,9 @@ describe('useCalendarData', () => {
     const today = new Date().toISOString().slice(0, 10)
     getAllDays.mockResolvedValue([makeEntry(today)])
     const { result } = renderHook(() => useCalendarData())
+    await act(async () => {
+      await result.current.refresh()
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.currentStreak).toBe(1)
     expect(result.current.longestStreak).toBe(1)
@@ -80,8 +99,17 @@ describe('useCalendarData', () => {
   it('returns zero streaks when no entries have photos', async () => {
     getAllDays.mockResolvedValue([makeEntry('2026-07-16', null)])
     const { result } = renderHook(() => useCalendarData())
+    await act(async () => {
+      await result.current.refresh()
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.currentStreak).toBe(0)
     expect(result.current.longestStreak).toBe(0)
+  })
+
+  it('does not call getAllDays until refresh is invoked', () => {
+    getAllDays.mockResolvedValue([])
+    renderHook(() => useCalendarData())
+    expect(getAllDays).not.toHaveBeenCalled()
   })
 })

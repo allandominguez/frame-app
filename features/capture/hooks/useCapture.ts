@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Alert } from 'react-native'
-import { getDay, upsertDay } from '../../../lib/repositories/day'
+import { getDay, upsertDayPhoto } from '../../../lib/repositories/day'
 import { deletePhoto } from '../../../lib/storage/photoStorage'
 import { CaptureResult } from '../types'
 import { usePhotoPicker } from './usePhotoPicker'
@@ -24,10 +24,9 @@ export function useCapture() {
     }
 
     const coords = result.exifGps ?? result.deviceGps
-    await upsertDay({
+    await upsertDayPhoto({
       date: new Date().toISOString().slice(0, 10),
       photo_path: result.localPath,
-      note_text: null,
       latitude: coords?.latitude ?? null,
       longitude: coords?.longitude ?? null,
       location_name: result.locationName,

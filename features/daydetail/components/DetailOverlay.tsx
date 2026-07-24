@@ -1,5 +1,6 @@
+import { IconTrash } from '@tabler/icons-react-native'
 import { useEffect, useRef } from 'react'
-import { Animated, Easing, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Animated, Easing, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { Colors, Spacing, Typography } from '../../../lib/design'
 import {
   NOTE_BAND_BOTTOM,
@@ -29,6 +30,7 @@ type Props = {
   onNoteChangeText: (text: string) => void
   onNoteFocus: () => void
   onNoteBlur: () => void
+  onDeletePhoto: () => void
   pageHeight: number
 }
 
@@ -40,6 +42,7 @@ export function DetailOverlay({
   onNoteChangeText,
   onNoteFocus,
   onNoteBlur,
+  onDeletePhoto,
   pageHeight,
 }: Props) {
   const opacity = useRef(new Animated.Value(0)).current
@@ -82,6 +85,14 @@ export function DetailOverlay({
           accessibilityLabel="Note for this day"
         />
       </Animated.View>
+      <Pressable
+        style={styles.deleteButton}
+        onPress={onDeletePhoto}
+        accessibilityRole="button"
+        accessibilityLabel="Delete photo"
+      >
+        <IconTrash size={22} color={TEXT_COLOR} style={styles.deleteIcon} />
+      </Pressable>
     </Animated.View>
   )
 }
@@ -120,5 +131,15 @@ const styles = StyleSheet.create({
     color: TEXT_COLOR,
     padding: 0,
     textAlignVertical: 'top',
+  },
+  deleteButton: {
+    position: 'absolute',
+    bottom: '6%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  deleteIcon: {
+    opacity: 0.7,
   },
 })

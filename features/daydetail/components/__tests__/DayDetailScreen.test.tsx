@@ -14,6 +14,20 @@ jest.mock('../../../../lib/repositories/day', () => ({
   getAllDays: () => mockGetAllDays(),
 }))
 
+// DayDetailPage's own rendering and delete-confirmation flow are covered in
+// its own test file — here we only need to verify the onPhotoDeleted prop is
+// wired to navigation, so it's stubbed down to a button that invokes it.
+jest.mock('../DayDetailPage', () => {
+  const { Pressable, Text } = require('react-native')
+  return {
+    DayDetailPage: ({ onPhotoDeleted }: { onPhotoDeleted: () => void }) => (
+      <Pressable accessibilityLabel="Simulate photo deleted" onPress={onPhotoDeleted}>
+        <Text>page</Text>
+      </Pressable>
+    ),
+  }
+})
+
 type Props = NativeStackScreenProps<RootStackParamList, 'DayDetail'>
 
 function makeProps(overrides: Partial<Props> = {}): Props {
@@ -66,6 +80,21 @@ describe('DayDetailScreen', () => {
       jest.advanceTimersByTime(1700)
     })
     fireEvent.press(screen.getByLabelText('Back'))
+
+    expect(goBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('navigates back to the calendar once a photo delete completes', async () => {
+    mockGetAllDays.mockResolvedValue([{ date: '2026-06-08', photo_path: '/photos/2026-06-08.jpg' }])
+    const goBack = jest.fn()
+    const { getByTestId } = await renderScreen({
+      navigation: { goBack } as unknown as Props['navigation'],
+    })
+
+    fireEvent(getByTestId('day-detail-container'), 'layout', {
+      nativeEvent: { layout: { height: 800 } },
+    })
+    fireEvent.press(screen.getByLabelText('Simulate photo deleted'))
 
     expect(goBack).toHaveBeenCalledTimes(1)
   })

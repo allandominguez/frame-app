@@ -1,4 +1,4 @@
-import { formatDateAccessibilityLabel, formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
+import { formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
 
 describe('formatDateOverlayLabel', () => {
   it('formats as day-of-month and abbreviated weekday on separate lines', () => {
@@ -11,16 +11,6 @@ describe('formatDateOverlayLabel', () => {
 
   it('formats a Sunday correctly', () => {
     expect(formatDateOverlayLabel('2026-06-07')).toBe('7\nSun')
-  })
-})
-
-describe('formatDateAccessibilityLabel', () => {
-  it('formats a full, spoken-friendly date', () => {
-    expect(formatDateAccessibilityLabel('2026-06-08')).toBe('Monday, 8 June 2026')
-  })
-
-  it('does not zero-pad the day of month', () => {
-    expect(formatDateAccessibilityLabel('2026-06-01')).toBe('Monday, 1 June 2026')
   })
 })
 

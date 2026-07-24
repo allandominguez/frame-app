@@ -6,15 +6,18 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Colors, Spacing, Typography } from '../../../lib/design'
 import { RootStackParamList } from '../../../navigation/types'
 import { useCalendarData } from '../hooks/useCalendarData'
+import { useDayActionMenu } from '../hooks/useDayActionMenu'
 import { useMonthPager } from '../hooks/useMonthPager'
 import { MONTH_NAMES } from '../utils'
 import { CalendarGrid } from './CalendarGrid'
+import { DayActionMenu } from './DayActionMenu'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>
 
 export function CalendarScreen({ navigation }: Props) {
   const { entriesByDate, months, today, currentStreak, longestStreak, isLoading, refresh } =
     useCalendarData()
+  const { target, open: openDayActionMenu, close: closeDayActionMenu } = useDayActionMenu()
 
   const {
     displayMonths,
@@ -40,6 +43,7 @@ export function CalendarScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.root}>
       <View
+        testID="calendar-list-container"
         style={styles.listContainer}
         onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}
       >
@@ -48,6 +52,11 @@ export function CalendarScreen({ navigation }: Props) {
             ref={flatListRef}
             style={styles.list}
             data={displayMonths}
+            // renderItem closes over entriesByDate (via CalendarGrid), which isn't
+            // part of `data` — without this, FlatList has no reason to re-render
+            // already-mounted month cells when a day's entry changes in place
+            // (e.g. a photo delete), so the accent dot would keep showing stale data.
+            extraData={entriesByDate}
             initialScrollIndex={displayMonths.length - 1}
             keyExtractor={(item) => `${item.year}-${item.month}`}
             renderItem={({ item }) => (
@@ -66,6 +75,10 @@ export function CalendarScreen({ navigation }: Props) {
                   entriesByDate={entriesByDate}
                   today={today}
                   onDayPress={(date) => navigation.navigate('DayDetail', { date })}
+                  onDayLongPress={(date) => {
+                    const photoPath = entriesByDate[date]?.photo_path
+                    if (photoPath) openDayActionMenu(date, photoPath)
+                  }}
                 />
               </View>
             )}
@@ -99,6 +112,14 @@ export function CalendarScreen({ navigation }: Props) {
           )}
           <Text style={styles.streakText}>Best {longestStreak}</Text>
         </View>
+      )}
+      {target && (
+        <DayActionMenu
+          date={target.date}
+          photoPath={target.photoPath}
+          onClose={closeDayActionMenu}
+          onDeleted={refresh}
+        />
       )}
     </SafeAreaView>
   )
