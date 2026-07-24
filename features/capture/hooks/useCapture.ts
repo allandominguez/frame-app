@@ -50,6 +50,17 @@ export function useCapture(onSaved?: (date: string) => void) {
   const pickerResult = usePhotoPicker(onCaptureComplete)
 
   const openSheet = async (date: string) => {
+    // Diagnostic trail for an intermittent, not-yet-reproduced report that the sheet
+    // stops reopening after several rapid open/dismiss cycles — remove once either a
+    // reliable repro or a root cause is confirmed.
+    if (__DEV__) {
+      console.log('[useCapture] openSheet called', {
+        date,
+        previousTargetDate: targetDate,
+        sheetVisibleBefore: pickerResult.sheetVisible,
+      })
+    }
+
     setTargetDate(date)
 
     // Already confirmed replacement for this date in this session — open directly without re-prompting
