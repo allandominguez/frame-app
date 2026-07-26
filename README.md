@@ -3,7 +3,7 @@
 [![Lint](https://github.com/allandominguez/frame-app/actions/workflows/lint.yml/badge.svg)](https://github.com/allandominguez/frame-app/actions/workflows/lint.yml)
 [![Test](https://github.com/allandominguez/frame-app/actions/workflows/test.yml/badge.svg)](https://github.com/allandominguez/frame-app/actions/workflows/test.yml)
 
-> **Status:** 🚧 Early-stage — foundation and environment setup in progress.
+> **Status:** 🚧 Active development — core capture-to-calendar flow (photo capture, calendar view, day detail, text notes) is built and working end-to-end on a personal test device. Reminders, settings, and backup are still to come.
 
 A private, local-first daily photo journal. Capture one moment per day, with an optional note. All data lives on-device; no account required.
 
@@ -13,12 +13,17 @@ A private, local-first daily photo journal. Capture one moment per day, with an 
 
 ---
 
-## Key Features (Planned)
+## Key Features
 
-- **One photo per day** — A single focused capture with optional text note
+**Shipped:**
+
+- **One photo per day** — A single focused capture with optional text note, including replace and delete flows
 - **Calendar view** — Monthly grid with photo thumbnails at a glance
 - **Streak tracker** — Current and longest capture streaks to reinforce the daily habit
 - **Local-first** — All data stored on-device; works entirely offline
+
+**Planned:**
+
 - **Daily reminders** — Time-based and location-based (geofence exit from home)
 - **Google Drive backup** — Direct backup and restore from within the app
 - **Optional sync** — Self-hosted Go service for multi-device sync (advanced users)
