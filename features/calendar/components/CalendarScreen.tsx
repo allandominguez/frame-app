@@ -21,7 +21,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Calendar'>
 function alertPermissionBlocked() {
   Alert.alert(
     'Permission needed',
-    'Frame needs access to your camera or photos to add a picture. You can enable this in Settings.',
+    'stills needs access to your camera or photos to add a picture. You can enable this in Settings.',
     [
       { text: 'Not now', style: 'cancel' },
       { text: 'Open Settings', onPress: () => Linking.openSettings() },
