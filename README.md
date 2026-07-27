@@ -5,9 +5,9 @@
 
 > **Status:** 🚧 Active development — core capture-to-calendar flow (photo capture, calendar view, day detail, text notes) is built and working end-to-end on a personal test device. Reminders, settings, and backup are still to come.
 
-A private, local-first daily photo journal. Capture one moment per day, with an optional note. All data lives on-device; no account required.
+A private, local-first daily photo journal. Capture one moment per day, with an optional note. All data lives on-device; no account required. One photo. One note. One day.
 
-**_One photo. One note. One day._**
+**_Capture. Reflect. Keep._**
 
 > This repository contains the **mobile app** (React Native / Expo). An optional self-hosted sync service (`stills-sync`) is planned but not yet developed.
 
