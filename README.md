@@ -9,7 +9,7 @@ A private, local-first daily photo journal. Capture one moment per day, with an 
 
 **_One photo. One note. One day._**
 
-> This repository contains the **mobile app** (React Native / Expo). An optional self-hosted sync service (`frame-sync`) is planned but not yet developed.
+> This repository contains the **mobile app** (React Native / Expo). An optional self-hosted sync service (`stills-sync`) is planned but not yet developed.
 
 ---
 
