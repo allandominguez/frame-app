@@ -104,4 +104,36 @@ describe('useCalendarData', () => {
     renderHook(() => useCalendarData())
     expect(getAllDays).not.toHaveBeenCalled()
   })
+
+  it('refreshes when the app returns to the foreground after being backgrounded', async () => {
+    getAllDays.mockResolvedValue([])
+    const { result } = renderAndLoad()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    getAllDays.mockClear()
+
+    const { AppState } = require('react-native')
+    const [, onAppStateChange] = AppState.addEventListener.mock.calls.at(-1)
+
+    await act(async () => {
+      onAppStateChange('active')
+    })
+
+    await waitFor(() => expect(getAllDays).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not refresh on background/inactive transitions', async () => {
+    getAllDays.mockResolvedValue([])
+    const { result } = renderAndLoad()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    getAllDays.mockClear()
+
+    const { AppState } = require('react-native')
+    const [, onAppStateChange] = AppState.addEventListener.mock.calls.at(-1)
+
+    await act(async () => {
+      onAppStateChange('background')
+    })
+
+    expect(getAllDays).not.toHaveBeenCalled()
+  })
 })
