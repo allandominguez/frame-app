@@ -1,5 +1,5 @@
 import { DayEntry } from '../../../lib/repositories/day'
-import { buildMonthCells, getMonthsUpToNow } from '../utils'
+import { buildMonthCells, getLocalDateString, getMonthsUpToNow } from '../utils'
 
 const noEntries: Record<string, DayEntry> = {}
 
@@ -18,6 +18,31 @@ function makeEntry(date: string, accentColor: string | null = null): DayEntry {
     share_color: null,
   }
 }
+
+describe('getLocalDateString', () => {
+  it('formats a Date using its own local year/month/day, zero-padded', () => {
+    const date = new Date(2026, 6, 5) // local: 5 July 2026
+    expect(getLocalDateString(date)).toBe('2026-07-05')
+  })
+
+  it('uses the local calendar date even when it differs from the UTC calendar date', () => {
+    // A stand-in for a real Date just after local midnight in a timezone ahead of UTC —
+    // local and UTC fields deliberately disagree, mirroring the original bug: the old
+    // toISOString()-based implementation read the UTC field below, a day behind the real
+    // local day. Using a stand-in rather than a real Date + a real IANA timezone keeps this
+    // deterministic — it doesn't depend on the host/CI machine's tzdata or DST rules.
+    const divergentDate = {
+      getFullYear: () => 2026,
+      getMonth: () => 6, // local: July
+      getDate: () => 16, // local day has already rolled over
+      getUTCFullYear: () => 2026,
+      getUTCMonth: () => 6,
+      getUTCDate: () => 15, // UTC day hasn't rolled over yet
+    } as unknown as Date
+
+    expect(getLocalDateString(divergentDate)).toBe('2026-07-16')
+  })
+})
 
 describe('buildMonthCells', () => {
   it('produces 2 leading empty cells for a month starting on Wednesday', () => {

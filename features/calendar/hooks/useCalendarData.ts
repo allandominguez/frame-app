@@ -3,7 +3,7 @@ import { AppState } from 'react-native'
 import { DayEntry, getAllDays } from '../../../lib/repositories/day'
 import { computeStreaks } from '../streaks'
 import { MonthData } from '../types'
-import { getMonthsUpToNow } from '../utils'
+import { getLocalDateString, getMonthsUpToNow } from '../utils'
 
 type CalendarData = {
   entriesByDate: Record<string, DayEntry>
@@ -22,7 +22,7 @@ type CalendarData = {
 // transitions, not on mount.)
 export function useCalendarData(): CalendarData {
   const [entries, setEntries] = useState<DayEntry[]>([])
-  const [today, setToday] = useState(() => new Date().toISOString().slice(0, 10))
+  const [today, setToday] = useState(() => getLocalDateString())
   const [isLoading, setIsLoading] = useState(true)
 
   // No mount-effect here — CalendarScreen's useFocusEffect already calls refresh()
@@ -30,7 +30,7 @@ export function useCalendarData(): CalendarData {
   // caused two concurrent getAllDays() calls on the shared SQLite connection,
   // a confirmed cause of a native NullPointerException on Android.
   const load = useCallback(async () => {
-    setToday(new Date().toISOString().slice(0, 10))
+    setToday(getLocalDateString())
     const all = await getAllDays()
     setEntries(all)
     setIsLoading(false)

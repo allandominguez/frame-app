@@ -1,5 +1,22 @@
 import { computeStreaks } from '../streaks'
 
+jest.mock('../utils', () => ({
+  getLocalDateString: jest.fn(),
+}))
+
+const { getLocalDateString } = require('../utils') as { getLocalDateString: jest.Mock }
+
+describe('computeStreaks default "today"', () => {
+  // getLocalDateString's own local-vs-UTC correctness is covered in utils.test.ts; this
+  // guards the wiring at this call site — that the default still delegates to it rather
+  // than a reintroduced toISOString()-based one-liner.
+  it('anchors the current streak to whatever the local-date helper reports as today', () => {
+    getLocalDateString.mockReturnValue('2026-07-16')
+    const { currentStreak } = computeStreaks(['2026-07-16'])
+    expect(currentStreak).toBe(1)
+  })
+})
+
 describe('computeStreaks', () => {
   it('returns zero for both when no dates are given', () => {
     expect(computeStreaks([], '2026-07-16')).toEqual({ currentStreak: 0, longestStreak: 0 })
