@@ -1,5 +1,24 @@
 import { computeStreaks } from '../streaks'
 
+describe('computeStreaks default "today"', () => {
+  const originalTZ = process.env.TZ
+
+  afterEach(() => {
+    process.env.TZ = originalTZ
+    jest.useRealTimers()
+  })
+
+  it('anchors the current streak to the local date, not the UTC date, near local midnight', () => {
+    process.env.TZ = 'Australia/Sydney' // UTC+10
+    // 2026-07-15T14:30:00Z is 2026-07-16 00:30 local — local day has already rolled over
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T14:30:00.000Z'))
+
+    // A photo already exists for the (correct) local today, 2026-07-16.
+    const { currentStreak } = computeStreaks(['2026-07-16'])
+    expect(currentStreak).toBe(1)
+  })
+})
+
 describe('computeStreaks', () => {
   it('returns zero for both when no dates are given', () => {
     expect(computeStreaks([], '2026-07-16')).toEqual({ currentStreak: 0, longestStreak: 0 })

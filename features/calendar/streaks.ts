@@ -1,3 +1,5 @@
+import { getLocalDateString } from './utils'
+
 export type StreakData = {
   currentStreak: number
   longestStreak: number
@@ -5,7 +7,7 @@ export type StreakData = {
 
 export function computeStreaks(
   photoDates: string[],
-  today: string = new Date().toISOString().slice(0, 10),
+  today: string = getLocalDateString(),
 ): StreakData {
   if (photoDates.length === 0) return { currentStreak: 0, longestStreak: 0 }
 
