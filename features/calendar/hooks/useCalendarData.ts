@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AppState } from 'react-native'
 import { DayEntry, getAllDays } from '../../../lib/repositories/day'
 import { computeStreaks } from '../streaks'
 import { MonthData } from '../types'
@@ -14,9 +15,11 @@ type CalendarData = {
   refresh: () => void
 }
 
-// The initial load is triggered by the consumer's useFocusEffect, not an effect in here —
-// useFocusEffect already fires on first mount as well as every later focus, so a second,
-// separate mount-time fetch here would just race it on the same shared SQLite connection.
+// The initial load is triggered by the consumer's useFocusEffect, not a mount-effect in
+// here — useFocusEffect already fires on first mount as well as every later focus, so a
+// second, separate mount-time fetch here would just race it on the same shared SQLite
+// connection. (The AppState effect below is unrelated: it only fires on background/foreground
+// transitions, not on mount.)
 export function useCalendarData(): CalendarData {
   const [entries, setEntries] = useState<DayEntry[]>([])
   const [today, setToday] = useState(() => new Date().toISOString().slice(0, 10))
@@ -32,6 +35,18 @@ export function useCalendarData(): CalendarData {
     setEntries(all)
     setIsLoading(false)
   }, [])
+
+  // useFocusEffect (in the consumer) only fires on navigation focus/blur — it doesn't
+  // fire when the app is merely backgrounded overnight and reopened, since the calendar
+  // screen never loses navigation focus in that case. Without this, "today" (and the
+  // capture button's plus/replace state) stays stuck on whichever day the app was last
+  // focused on.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') load()
+    })
+    return () => subscription.remove()
+  }, [load])
 
   const entriesByDate = useMemo(
     () => Object.fromEntries(entries.map((e) => [e.date, e])),
