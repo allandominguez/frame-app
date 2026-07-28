@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native'
 import { DayEntry } from '../../../../lib/repositories/day'
+import { getLocalDateString } from '../../utils'
 import { useCalendarData } from '../useCalendarData'
 
 jest.mock('../../../../lib/repositories/day', () => ({
@@ -83,7 +84,7 @@ describe('useCalendarData', () => {
   })
 
   it('exposes streak counts derived from entries with photos', async () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = getLocalDateString()
     getAllDays.mockResolvedValue([makeEntry(today)])
     const { result } = renderAndLoad()
     await waitFor(() => expect(result.current.isLoading).toBe(false))

@@ -1,19 +1,17 @@
 import { computeStreaks } from '../streaks'
 
+jest.mock('../utils', () => ({
+  getLocalDateString: jest.fn(),
+}))
+
+const { getLocalDateString } = require('../utils') as { getLocalDateString: jest.Mock }
+
 describe('computeStreaks default "today"', () => {
-  const originalTZ = process.env.TZ
-
-  afterEach(() => {
-    process.env.TZ = originalTZ
-    jest.useRealTimers()
-  })
-
-  it('anchors the current streak to the local date, not the UTC date, near local midnight', () => {
-    process.env.TZ = 'Australia/Sydney' // UTC+10
-    // 2026-07-15T14:30:00Z is 2026-07-16 00:30 local — local day has already rolled over
-    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T14:30:00.000Z'))
-
-    // A photo already exists for the (correct) local today, 2026-07-16.
+  // getLocalDateString's own local-vs-UTC correctness is covered in utils.test.ts; this
+  // guards the wiring at this call site — that the default still delegates to it rather
+  // than a reintroduced toISOString()-based one-liner.
+  it('anchors the current streak to whatever the local-date helper reports as today', () => {
+    getLocalDateString.mockReturnValue('2026-07-16')
     const { currentStreak } = computeStreaks(['2026-07-16'])
     expect(currentStreak).toBe(1)
   })

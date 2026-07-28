@@ -20,29 +20,27 @@ function makeEntry(date: string, accentColor: string | null = null): DayEntry {
 }
 
 describe('getLocalDateString', () => {
-  const originalTZ = process.env.TZ
-
-  afterEach(() => {
-    process.env.TZ = originalTZ
+  it('formats a Date using its own local year/month/day, zero-padded', () => {
+    const date = new Date(2026, 6, 5) // local: 5 July 2026
+    expect(getLocalDateString(date)).toBe('2026-07-05')
   })
 
-  it('returns the local calendar date even when UTC has not rolled over yet', () => {
-    process.env.TZ = 'Australia/Sydney' // UTC+10
-    // 2026-07-15T14:30:00Z is already 2026-07-16 00:30 in Sydney
-    const justAfterLocalMidnight = new Date('2026-07-15T14:30:00.000Z')
-    expect(getLocalDateString(justAfterLocalMidnight)).toBe('2026-07-16')
-  })
+  it('uses the local calendar date even when it differs from the UTC calendar date', () => {
+    // A stand-in for a real Date just after local midnight in a timezone ahead of UTC —
+    // local and UTC fields deliberately disagree, mirroring the original bug: the old
+    // toISOString()-based implementation read the UTC field below, a day behind the real
+    // local day. Using a stand-in rather than a real Date + a real IANA timezone keeps this
+    // deterministic — it doesn't depend on the host/CI machine's tzdata or DST rules.
+    const divergentDate = {
+      getFullYear: () => 2026,
+      getMonth: () => 6, // local: July
+      getDate: () => 16, // local day has already rolled over
+      getUTCFullYear: () => 2026,
+      getUTCMonth: () => 6,
+      getUTCDate: () => 15, // UTC day hasn't rolled over yet
+    } as unknown as Date
 
-  it('matches the UTC date once the local day has caught up', () => {
-    process.env.TZ = 'Australia/Sydney' // UTC+10
-    const midAfternoonLocal = new Date('2026-07-16T04:00:00.000Z') // 14:00 Sydney
-    expect(getLocalDateString(midAfternoonLocal)).toBe('2026-07-16')
-  })
-
-  it('matches the UTC date for devices in the UTC timezone', () => {
-    process.env.TZ = 'UTC'
-    const anyMoment = new Date('2026-07-16T00:30:00.000Z')
-    expect(getLocalDateString(anyMoment)).toBe('2026-07-16')
+    expect(getLocalDateString(divergentDate)).toBe('2026-07-16')
   })
 })
 
