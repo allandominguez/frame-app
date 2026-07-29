@@ -14,9 +14,7 @@ function confirmReplacement(): Promise<boolean> {
   })
 }
 
-// A single hook instance serves capture requests for any date — the calendar taps into
-// it once for whichever cell (or the dedicated "today" button) the user pressed — so the
-// in-flight target date travels with the request rather than being fixed at hook creation.
+// One instance serves any date — the target travels with the request rather than being fixed at creation.
 export function useCapture(onSaved?: (date: string) => void) {
   const [targetDate, setTargetDate] = useState<string | null>(null)
   const [confirmedReplacement, setConfirmedReplacement] = useState<{
@@ -50,9 +48,7 @@ export function useCapture(onSaved?: (date: string) => void) {
   const pickerResult = usePhotoPicker(onCaptureComplete)
 
   const openSheet = async (date: string) => {
-    // Diagnostic trail for an intermittent, not-yet-reproduced report that the sheet
-    // stops reopening after several rapid open/dismiss cycles — remove once either a
-    // reliable repro or a root cause is confirmed.
+    // Diagnostic trail for an unreproduced "sheet won't reopen" report — remove once root-caused.
     if (__DEV__) {
       console.log('[useCapture] openSheet called', {
         date,
@@ -80,9 +76,7 @@ export function useCapture(onSaved?: (date: string) => void) {
     pickerResult.openSheet()
   }
 
-  // Abandoning the sheet (backdrop tap, hardware back, Cancel) without completing a
-  // capture must drop any pending replacement confirmation — otherwise a later press
-  // for the same date skips the confirmation alert even though nothing was replaced.
+  // Abandoning the sheet must drop any pending replacement confirmation, or a later press skips the alert.
   const onDismiss = () => {
     setConfirmedReplacement(null)
     pickerResult.sheetProps.onDismiss()

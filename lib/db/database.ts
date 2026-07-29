@@ -6,10 +6,8 @@ let db: SQLite.SQLiteDatabase | null = null
 
 const TRACED_METHODS = new Set(['getFirstAsync', 'getAllAsync', 'runAsync', 'execAsync'])
 
-// Diagnostic wrapper for an unconfirmed report of a query hanging indefinitely after a
-// capture-then-navigate sequence. Traces every call made through the shared connection —
-// a hang shows up as a "start" log with no matching "done" — without any repository
-// function needing to know tracing exists. Remove once the actual cause is confirmed.
+// Diagnostic wrapper for an unconfirmed query-hang report — traces every call transparently.
+// A hang shows up as a "start" log with no matching "done". Remove once root-caused.
 function withTracing(database: SQLite.SQLiteDatabase): SQLite.SQLiteDatabase {
   return new Proxy(database, {
     get(target, prop, receiver) {

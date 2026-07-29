@@ -33,9 +33,7 @@ export function usePhotoPicker(
   const [pendingExifGps, setPendingExifGps] = useState<GpsCoordinates | null>(null)
   const { requestCameraPermission, requestMediaLibraryPermission } = useCapturePermissions()
 
-  // Diagnostic trail paired with useCapture's — see the note there. Tracks the actual
-  // sheetVisible flips so a stuck-modal report can be narrowed to "JS state is toggling
-  // correctly but the native Modal isn't responding" vs. "the flip itself isn't happening".
+  // Diagnostic trail paired with useCapture's — narrows a stuck-modal report to JS state vs. native Modal.
   const openSheet = () => {
     if (__DEV__) console.log('[usePhotoPicker] sheetVisible -> true')
     setSheetVisible(true)

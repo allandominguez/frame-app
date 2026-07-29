@@ -16,10 +16,7 @@ const DISMISS_MS = 250
 const TEXT_COLOR = Colors.surface
 const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.6)'
 
-// Not a UX-driven length limit — the note scrolls, so there's no visual
-// reason to cap it tightly. This is a backstop against a pathological paste
-// (e.g. someone pasting a huge block of text) bloating a row or janking the
-// input; ~8000 characters is far beyond anything hand-typed.
+// Not UX-driven (the note scrolls) — just a backstop against a pathological paste bloating the input.
 const NOTE_MAX_LENGTH = 8000
 
 type Props = {

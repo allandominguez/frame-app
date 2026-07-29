@@ -15,20 +15,13 @@ type CalendarData = {
   refresh: () => void
 }
 
-// The initial load is triggered by the consumer's useFocusEffect, not a mount-effect in
-// here — useFocusEffect already fires on first mount as well as every later focus, so a
-// second, separate mount-time fetch here would just race it on the same shared SQLite
-// connection. (The AppState effect below is unrelated: it only fires on background/foreground
-// transitions, not on mount.)
 export function useCalendarData(): CalendarData {
   const [entries, setEntries] = useState<DayEntry[]>([])
   const [today, setToday] = useState(() => getLocalDateString())
   const [isLoading, setIsLoading] = useState(true)
 
-  // No mount-effect here — CalendarScreen's useFocusEffect already calls refresh()
-  // on initial focus, which fires on mount too. A second effect here previously
-  // caused two concurrent getAllDays() calls on the shared SQLite connection,
-  // a confirmed cause of a native NullPointerException on Android.
+  // No mount-effect here — the consumer's useFocusEffect already fires on mount; a second
+  // concurrent fetch here previously caused a confirmed native NullPointerException on Android.
   const load = useCallback(async () => {
     setToday(getLocalDateString())
     const all = await getAllDays()
@@ -36,11 +29,7 @@ export function useCalendarData(): CalendarData {
     setIsLoading(false)
   }, [])
 
-  // useFocusEffect (in the consumer) only fires on navigation focus/blur — it doesn't
-  // fire when the app is merely backgrounded overnight and reopened, since the calendar
-  // screen never loses navigation focus in that case. Without this, "today" (and the
-  // capture button's plus/replace state) stays stuck on whichever day the app was last
-  // focused on.
+  // useFocusEffect doesn't fire on background/foreground alone; without this, "today" stays stale overnight.
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') load()
@@ -64,8 +53,7 @@ export function useCalendarData(): CalendarData {
   )
 
   const months = useMemo(() => {
-    // Show at least 6 months of history so new users have months to scroll through.
-    // If the earliest entry predates that window, extend back to cover it.
+    // Show at least 6 months of history; extend further back if the earliest entry predates that.
     const floor = new Date(today + 'T00:00:00.000Z')
     floor.setUTCMonth(floor.getUTCMonth() - 6)
     let startYear = floor.getUTCFullYear()
