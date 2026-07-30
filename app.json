@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "stills",
-    "slug": "stills",
+    "name": "still",
+    "slug": "still",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.allandominguez.stills",
+      "package": "com.allandominguez.still",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,20 +28,20 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "stills needs camera access to capture today's photo."
+          "cameraPermission": "still needs camera access to capture today's photo."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "stills needs access to your photos to choose today's photo."
+          "photosPermission": "still needs access to your photos to choose today's photo."
         }
       ],
       "expo-asset",
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "stills uses your location when no GPS data is in the photo."
+          "locationWhenInUsePermission": "still uses your location when no GPS data is in the photo."
         }
       ]
     ]

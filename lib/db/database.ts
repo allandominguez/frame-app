@@ -49,7 +49,7 @@ async function applyMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
 
 export async function openDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (!db) {
-    const raw = await SQLite.openDatabaseAsync('stills.db')
+    const raw = await SQLite.openDatabaseAsync('still.db')
     await applyMigrations(raw)
     db = __DEV__ ? withTracing(raw) : raw
   }
