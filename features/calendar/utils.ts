@@ -64,6 +64,39 @@ export function buildMonthCells(
   return cells
 }
 
+const SWIPE_THRESHOLD = 40
+
+// Distinguishes an intentional horizontal swipe from a vertical scroll or an incidental touch.
+export function isHorizontalSwipe(dx: number, dy: number): boolean {
+  return Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.5
+}
+
+// Swipe right = newer month (higher index), swipe left = older month (lower index).
+export function monthSwipeTarget(dx: number, currentIndex: number): number | null {
+  if (dx > SWIPE_THRESHOLD) return currentIndex + 1
+  if (dx < -SWIPE_THRESHOLD) return currentIndex - 1
+  return null
+}
+
+// Swipe right = newer year (year + 1), swipe left = older year (year - 1), same month.
+export function yearSwipeTarget(
+  dx: number,
+  currentMonth: MonthData,
+  displayMonths: MonthData[],
+): number | null {
+  const targetYear =
+    dx > SWIPE_THRESHOLD
+      ? currentMonth.year + 1
+      : dx < -SWIPE_THRESHOLD
+        ? currentMonth.year - 1
+        : null
+  if (targetYear === null) return null
+  const idx = displayMonths.findIndex(
+    (m) => m.year === targetYear && m.month === currentMonth.month,
+  )
+  return idx >= 0 ? idx : null
+}
+
 export function getMonthsUpToNow(
   startYear: number,
   startMonth: number,
