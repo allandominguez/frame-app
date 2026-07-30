@@ -1,7 +1,7 @@
-# stills
+# still
 
-[![Lint](https://github.com/allandominguez/stills-app/actions/workflows/lint.yml/badge.svg)](https://github.com/allandominguez/stills-app/actions/workflows/lint.yml)
-[![Test](https://github.com/allandominguez/stills-app/actions/workflows/test.yml/badge.svg)](https://github.com/allandominguez/stills-app/actions/workflows/test.yml)
+[![Lint](https://github.com/allandominguez/still-app/actions/workflows/lint.yml/badge.svg)](https://github.com/allandominguez/still-app/actions/workflows/lint.yml)
+[![Test](https://github.com/allandominguez/still-app/actions/workflows/test.yml/badge.svg)](https://github.com/allandominguez/still-app/actions/workflows/test.yml)
 
 > **Status:** 🚧 Active development — core capture-to-calendar flow (photo capture, calendar view, day detail, text notes) is built and working end-to-end on a personal test device. Reminders, settings, and backup are still to come.
 
@@ -9,7 +9,7 @@ A private, local-first daily photo journal. Capture one moment per day, with an 
 
 **_Capture. Reflect. Keep._**
 
-> This repository contains the **mobile app** (React Native / Expo). An optional self-hosted sync service (`stills-sync`) is planned but not yet developed.
+> This repository contains the **mobile app** (React Native / Expo). An optional self-hosted sync service (`still-sync`) is planned but not yet developed.
 
 ---
 
@@ -58,8 +58,8 @@ A private, local-first daily photo journal. Capture one moment per day, with an 
 
 ```bash
 # Clone the repo
-git clone https://github.com/allandominguez/stills-app.git
-cd stills-app
+git clone https://github.com/allandominguez/still-app.git
+cd still-app
 
 # Install dependencies
 npm ci
@@ -77,7 +77,7 @@ npm run android  # Android directly
 ## Project Structure
 
 ```
-stills-app/
+still-app/
 ├── features/
 │   └── <name>/             # One folder per feature
 │       ├── components/     # Screens and UI components
@@ -118,7 +118,7 @@ Pre-commit hooks run gitleaks (secrets scanning) and lint-staged (ESLint --fix, 
 
 ## Project Goals
 
-stills is a portfolio piece demonstrating full-stack mobile product development — from local data modelling and camera APIs through to an optional self-hosted sync service in Go.
+still is a portfolio piece demonstrating full-stack mobile product development — from local data modelling and camera APIs through to an optional self-hosted sync service in Go.
 
 ### Product-Focused Thinking
 

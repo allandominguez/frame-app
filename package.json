@@ -1,5 +1,5 @@
 {
-  "name": "stills-app",
+  "name": "still-app",
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
