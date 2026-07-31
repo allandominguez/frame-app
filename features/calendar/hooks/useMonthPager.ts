@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, GestureResponderHandlers, PanResponder, ViewToken } from 'react-native'
 import { MonthData } from '../types'
+import { isHorizontalSwipe, monthSwipeTarget, yearSwipeTarget } from '../utils'
 
 type MonthPager = {
   displayMonths: MonthData[]
@@ -42,11 +43,10 @@ export function useMonthPager(months: MonthData[]): MonthPager {
   // Swipe right = newer month (higher index), swipe left = older month (lower index)
   const monthPanHandlers = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onMoveShouldSetPanResponder: (_, g) => isHorizontalSwipe(g.dx, g.dy),
       onPanResponderRelease: (_, g) => {
-        if (g.dx > 40) scrollToIndex(currentIndexRef.current + 1)
-        else if (g.dx < -40) scrollToIndex(currentIndexRef.current - 1)
+        const target = monthSwipeTarget(g.dx, currentIndexRef.current)
+        if (target !== null) scrollToIndex(target)
       },
     }),
   ).current.panHandlers
@@ -54,17 +54,12 @@ export function useMonthPager(months: MonthData[]): MonthPager {
   // Swipe right = newer year (year + 1), swipe left = older year (year - 1)
   const yearPanHandlers = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onMoveShouldSetPanResponder: (_, g) => isHorizontalSwipe(g.dx, g.dy),
       onPanResponderRelease: (_, g) => {
         const curr = displayMonthsRef.current[currentIndexRef.current]
         if (!curr) return
-        const targetYear = g.dx > 40 ? curr.year + 1 : g.dx < -40 ? curr.year - 1 : null
-        if (targetYear === null) return
-        const idx = displayMonthsRef.current.findIndex(
-          (m) => m.year === targetYear && m.month === curr.month,
-        )
-        if (idx >= 0) scrollToIndex(idx)
+        const target = yearSwipeTarget(g.dx, curr, displayMonthsRef.current)
+        if (target !== null) scrollToIndex(target)
       },
     }),
   ).current.panHandlers

@@ -12,10 +12,7 @@ export function useDateOverlayVisibility(focusedIndex: number): DateOverlayVisib
   const [visible, setVisible] = useState(true)
   const [prevFocusedIndex, setPrevFocusedIndex] = useState(focusedIndex)
 
-  // Flip back to visible synchronously during render, not in an effect —
-  // an effect-based reset lags one commit behind the focusedIndex change,
-  // which painted a stale value from the previously-focused page for one
-  // frame on every swipe.
+  // Reset synchronously during render, not via effect — an effect-based reset flashed stale state for one frame.
   if (focusedIndex !== prevFocusedIndex) {
     setPrevFocusedIndex(focusedIndex)
     setVisible(true)

@@ -6,10 +6,7 @@ export function useDayDetailBackHandler(
   closeDetailOverlay: () => void,
 ): void {
   useEffect(() => {
-    // DayDetail is always the top of the nav stack in this app (Calendar ->
-    // DayDetail, nothing is ever pushed on top of it), so a plain
-    // mount/unmount effect is enough here — this would need to become
-    // useFocusEffect if a screen is ever pushed on top of DayDetail.
+    // DayDetail is always top-of-stack here, so mount/unmount is enough — revisit if that changes.
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (detailOverlayVisible) {
         closeDetailOverlay()

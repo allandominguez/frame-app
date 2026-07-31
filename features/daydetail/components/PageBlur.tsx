@@ -8,9 +8,7 @@ type Props = {
   visible: boolean
 }
 
-// Always mounted for the lifetime of the page — only opacity toggles — so
-// the native blur is already warmed up by the time it needs to be visible,
-// rather than cold-starting exactly when the photo would otherwise show.
+// Always mounted, only opacity toggles — keeps the native blur warmed up instead of cold-starting on reveal.
 export function PageBlur({ visible }: Props) {
   const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current
 

@@ -36,19 +36,10 @@ export function DayDetailPage({
   // while the user is looking at (or clearing) an empty note.
   const [notePlaceholder] = useState(() => pickNotePlaceholder())
 
-  // The photo only becomes visible once it's the settled, focused page AND
-  // the date overlay has fully finished — otherwise it stays blurred, so
-  // there's no gap between "not yet focused" and "overlay showing" where an
-  // unblurred frame could flash through.
+  // Blurred until settled, focused, and the date overlay is fully gone, so no unblurred frame flashes through.
   const revealed = isFocused && !dateOverlayVisible
 
-  // Tapping outside the note while editing blurs (and saves) the note via
-  // native focus loss, but that same tap would otherwise also land on this
-  // Pressable and toggle the detail overlay shut — jarring mid-edit. This
-  // ref-based flag consumes exactly one such press. It self-clears on the
-  // next tick rather than staying set indefinitely, so a blur from some
-  // other cause (scrolling away, the back control) doesn't wrongly swallow
-  // an unrelated later tap.
+  // Consumes exactly one press after a note blur so it doesn't also toggle the overlay; self-clears next tick.
   const wasEditingRef = useRef(false)
   const handleNoteBlur = () => {
     wasEditingRef.current = true
@@ -58,8 +49,7 @@ export function DayDetailPage({
     }, 0)
   }
 
-  // While the date label is showing, a tap dismisses it early; once it's
-  // gone, the same tap toggles the location/note overlay instead.
+  // While the date label is showing, a tap dismisses it; once gone, the same tap toggles the note overlay.
   const handlePress = () => {
     if (wasEditingRef.current) {
       wasEditingRef.current = false
@@ -72,9 +62,7 @@ export function DayDetailPage({
     toggleDetailOverlay()
   }
 
-  // dateOverlayVisible/detailOverlayVisible describe the currently-focused
-  // page, not necessarily this one — a non-focused page has nothing of its
-  // own to announce, and it's disabled below anyway, so it gets no label.
+  // dateOverlayVisible/detailOverlayVisible describe the focused page only; non-focused pages get no label.
   const accessibilityLabel = !isFocused
     ? undefined
     : dateOverlayVisible

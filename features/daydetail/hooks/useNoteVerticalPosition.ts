@@ -1,18 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Animated, Keyboard, KeyboardEvent } from 'react-native'
 
-// A band (not a single point) so the note can grow across multiple lines
-// while staying vertically centred around ~60% of the page, expanding both
-// up and down via plain flexbox centring rather than manual measurement.
+// A band, not a point, so the note can grow while staying vertically centred via plain flexbox.
 export const NOTE_BAND_TOP = 0.4
 export const NOTE_BAND_BOTTOM = 0.8
 
 const BOTTOM_PADDING = 16
 const TRANSITION_MS = 200
 
-// Only shifts the band up when the keyboard would actually cover its bottom
-// edge, and only by however much overlap there is — not a blind full-height
-// jump, since the band is usually well above the keyboard already.
+// Only shifts up by however much the keyboard actually overlaps the band's bottom edge.
 export function computeKeyboardShift(pageHeight: number, keyboardHeight: number): number {
   const bandBottom = NOTE_BAND_BOTTOM * pageHeight
   const visibleBottom = pageHeight - keyboardHeight - BOTTOM_PADDING

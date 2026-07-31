@@ -47,4 +47,14 @@ describe('useMonthPager', () => {
 
     expect(result.current.currentIndex).toBe(MONTHS.length - 1)
   })
+
+  it('reports the page height once the container reports its layout', () => {
+    const { result } = renderHook(() => useMonthPager(MONTHS))
+
+    act(() => {
+      result.current.setPageHeight(812)
+    })
+
+    expect(result.current.pageHeight).toBe(812)
+  })
 })

@@ -1,5 +1,13 @@
 import { DayEntry } from '../../../lib/repositories/day'
-import { buildMonthCells, getLocalDateString, getMonthsUpToNow } from '../utils'
+import { MonthData } from '../types'
+import {
+  buildMonthCells,
+  getLocalDateString,
+  getMonthsUpToNow,
+  isHorizontalSwipe,
+  monthSwipeTarget,
+  yearSwipeTarget,
+} from '../utils'
 
 const noEntries: Record<string, DayEntry> = {}
 
@@ -108,6 +116,58 @@ describe('buildMonthCells', () => {
     // hasPhoto is still true; accentColor is null — DayCell handles the fallback colour
     expect(day10?.hasPhoto).toBe(true)
     expect(day10?.accentColor).toBeNull()
+  })
+})
+
+describe('isHorizontalSwipe', () => {
+  it('treats a swipe further right than up or down as horizontal', () => {
+    expect(isHorizontalSwipe(50, 5)).toBe(true)
+  })
+
+  it('treats a swipe with more vertical than horizontal movement as not horizontal', () => {
+    expect(isHorizontalSwipe(20, 30)).toBe(false)
+  })
+
+  it('ignores a small movement that does not clear the horizontal-distance floor', () => {
+    expect(isHorizontalSwipe(5, 0)).toBe(false)
+  })
+})
+
+describe('monthSwipeTarget', () => {
+  it('advances to the next month index when swiping right past the threshold', () => {
+    expect(monthSwipeTarget(50, 3)).toBe(4)
+  })
+
+  it('goes back to the previous month index when swiping left past the threshold', () => {
+    expect(monthSwipeTarget(-50, 3)).toBe(2)
+  })
+
+  it('does nothing when the swipe does not clear the threshold', () => {
+    expect(monthSwipeTarget(10, 3)).toBeNull()
+  })
+})
+
+describe('yearSwipeTarget', () => {
+  const months: MonthData[] = [
+    { year: 2025, month: 7 },
+    { year: 2026, month: 6 },
+    { year: 2026, month: 7 },
+  ]
+
+  it('jumps to the same month one year ahead when swiping right past the threshold', () => {
+    expect(yearSwipeTarget(50, { year: 2025, month: 7 }, months)).toBe(2)
+  })
+
+  it('jumps to the same month one year behind when swiping left past the threshold', () => {
+    expect(yearSwipeTarget(-50, { year: 2026, month: 7 }, months)).toBe(0)
+  })
+
+  it('does nothing when the target year does not have that month displayed', () => {
+    expect(yearSwipeTarget(-50, { year: 2026, month: 6 }, months)).toBeNull()
+  })
+
+  it('does nothing when the swipe does not clear the threshold', () => {
+    expect(yearSwipeTarget(10, { year: 2026, month: 7 }, months)).toBeNull()
   })
 })
 

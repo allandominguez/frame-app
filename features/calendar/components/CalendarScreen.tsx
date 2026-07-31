@@ -49,9 +49,7 @@ export function CalendarScreen({ navigation }: Props) {
   // displayMonths is ascending (oldest first), so the current month is always last.
   const isViewingCurrentMonth = currentIndex === displayMonths.length - 1
 
-  // 0 = showing the streak counter, 1 = showing the jump-back control. Both stay
-  // mounted (see the footer below) and crossfade via this shared value rather than
-  // hard-cutting between them.
+  // 0 = streak counter, 1 = jump-back control; both stay mounted and crossfade via this value.
   const footerTransition = useRef(new Animated.Value(isViewingCurrentMonth ? 0 : 1)).current
   useEffect(() => {
     const animation = Animated.timing(footerTransition, {
@@ -65,14 +63,9 @@ export function CalendarScreen({ navigation }: Props) {
 
   const todayHasPhoto = Boolean(entriesByDate[today]?.photo_path)
 
-  // Tracked separately from useCapture's internal target so the sheet's allowCamera
-  // can be derived here, where "today" is already known — capture itself doesn't
-  // need to care which date it's serving beyond the one passed to openSheet.
+  // Kept separate from useCapture's target so allowCamera can be derived here, where "today" is known.
   const [captureDate, setCaptureDate] = useState<string | null>(null)
-  // Landing on the entry right after capture (rather than back on the calendar)
-  // matches the natural next step — add a note, see the location — and means the
-  // calendar only needs to catch up via its existing focus-refetch when the user
-  // eventually backs out, not a separate manual refresh here.
+  // Navigates straight to the entry after capture; the calendar catches up via its existing focus-refetch.
   const capture = useCapture((date) => navigation.navigate('DayDetail', { date }))
 
   useEffect(() => {
@@ -94,9 +87,7 @@ export function CalendarScreen({ navigation }: Props) {
     capture.openSheet(date)
   }
 
-  // Unlike handleDayPress, this always targets today regardless of whether today
-  // already has a photo — openSheet's existing replace-confirmation flow (alert,
-  // then delete-old-only-after-new-is-confirmed) handles that case for free.
+  // Always targets today; openSheet's existing replace-confirmation flow handles an existing photo.
   const handleCaptureTodayPress = () => {
     setCaptureDate(today)
     capture.openSheet(today)
@@ -122,17 +113,11 @@ export function CalendarScreen({ navigation }: Props) {
             ref={flatListRef}
             style={styles.list}
             data={displayMonths}
-            // renderItem closes over entriesByDate (via CalendarGrid), which isn't
-            // part of `data` — without this, FlatList has no reason to re-render
-            // already-mounted month cells when a day's entry changes in place
-            // (e.g. a photo delete), so the accent dot would keep showing stale data.
+            // Forces FlatList to re-render mounted cells when an entry changes in place (e.g. a delete).
             extraData={entriesByDate}
             initialScrollIndex={displayMonths.length - 1}
             keyExtractor={(item) => `${item.year}-${item.month}`}
-            // The current month is always the last item — rendering the capture button
-            // as part of that page's own content (rather than a conditionally-mounted
-            // sibling keyed off scroll position) means it scrolls away naturally with the
-            // page instead of causing the list container to reflow on every month swipe.
+            // Capture button lives in the last page's own content so it scrolls with it, not the list container.
             renderItem={({ item, index }) => (
               <View style={[styles.page, { height: pageHeight }]}>
                 <View style={styles.pageHeader}>
@@ -190,11 +175,7 @@ export function CalendarScreen({ navigation }: Props) {
           />
         )}
       </View>
-      {/* Always mounted at a fixed height, unlike the capture button — only its content
-          crossfades between the streak counter and the jump-back control depending on
-          which month is in view, so this footer never itself moves or reflows the list
-          above it. Both states stay mounted so they can fade into one another instead of
-          hard-cutting; pointerEvents keeps the faded-out one from intercepting touches. */}
+      {/* Fixed-height footer; only its content crossfades between streak and jump-back, so it never reflows the list. */}
       <View style={styles.footerRow}>
         <Animated.View
           style={[
@@ -292,9 +273,7 @@ const styles = StyleSheet.create({
   },
   footerRow: {
     paddingVertical: Spacing.md,
-    // Fixed regardless of content (streak text, jump-back icon, or nothing when there's
-    // no streak yet) so this row's height — and therefore the list above it — never
-    // changes as its content swaps.
+    // Fixed height so the row never resizes as its content swaps between streak text and icon.
     minHeight: 18 + Spacing.md * 2,
   },
   footerLayer: {

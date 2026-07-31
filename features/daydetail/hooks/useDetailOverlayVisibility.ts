@@ -10,9 +10,7 @@ export function useDetailOverlayVisibility(focusedIndex: number): DetailOverlayV
   const [visible, setVisible] = useState(false)
   const [prevFocusedIndex, setPrevFocusedIndex] = useState(focusedIndex)
 
-  // Reset synchronously during render, not via an effect — see
-  // useDateOverlayVisibility for why an effect-based reset causes a
-  // one-frame flash of the previous page's state on the newly-focused page.
+  // Reset synchronously during render — see useDateOverlayVisibility for why an effect-based reset flashes stale state.
   if (focusedIndex !== prevFocusedIndex) {
     setPrevFocusedIndex(focusedIndex)
     setVisible(false)
