@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AppState } from 'react-native'
+import { trace } from '../../../lib/logging/trace'
 import { DayEntry, getAllDays } from '../../../lib/repositories/day'
 import { computeStreaks } from '../streaks'
 import { MonthData } from '../types'
@@ -25,6 +26,7 @@ export function useCalendarData(): CalendarData {
   const load = useCallback(async () => {
     setToday(getLocalDateString())
     const all = await getAllDays()
+    trace('[useCalendarData] load() done', { count: all.length })
     setEntries(all)
     setIsLoading(false)
   }, [])
