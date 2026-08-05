@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Image, Pressable, StyleSheet } from 'react-native'
 import { formatDateAccessibilityLabel } from '../../../lib/dates'
 import { useDeletePhoto } from '../../../lib/hooks/useDeletePhoto'
+import { trace } from '../../../lib/logging/trace'
 import { DayEntry } from '../../../lib/repositories/day'
 import { useNoteEditor } from '../hooks/useNoteEditor'
 import { formatDateOverlayLabel, pickNotePlaceholder } from '../utils'
@@ -85,6 +86,8 @@ export function DayDetailPage({
         resizeMode="contain"
         accessibilityLabel={`Photo from ${formatDateAccessibilityLabel(entry.date)}`}
         accessibilityRole="image"
+        // Correlates a black-screen report with a stale photo_path — see useDayDetailFeed.
+        onError={() => trace('[DayDetailPage] image failed to load', { date: entry.date })}
       />
       <PageBlur visible={!revealed} />
       {isFocused && (

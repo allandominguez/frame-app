@@ -28,6 +28,12 @@ jest.mock('../../../../lib/storage/photoStorage', () => ({
   deletePhoto: (...args: unknown[]) => mockDeletePhoto(...args),
 }))
 
+const mockTrace = jest.fn()
+
+jest.mock('../../../../lib/logging/trace', () => ({
+  trace: (...args: unknown[]) => mockTrace(...args),
+}))
+
 function simulateAlert(choice: 'Cancel' | 'Delete') {
   return jest.spyOn(Alert, 'alert').mockImplementationOnce((_title, _message, buttons) => {
     const btn = (buttons as AlertButton[]).find((b) => b.text === choice)
@@ -81,6 +87,16 @@ describe('DayDetailPage', () => {
   it('shows the photo for the entry', () => {
     render(<DayDetailPage {...makeProps()} />)
     expect(screen.getByLabelText('Photo from Monday, 8 June 2026')).toBeTruthy()
+  })
+
+  it('traces a failed image load, for diagnosing the intermittent black-screen report', () => {
+    render(<DayDetailPage {...makeProps({ entry: makeEntry({ date: '2026-06-08' }) })} />)
+
+    fireEvent(screen.getByLabelText('Photo from Monday, 8 June 2026'), 'error')
+
+    expect(mockTrace).toHaveBeenCalledWith('[DayDetailPage] image failed to load', {
+      date: '2026-06-08',
+    })
   })
 
   it('shows the date overlay when focused and the date overlay is visible', () => {
