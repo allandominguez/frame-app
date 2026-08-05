@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { trace } from '../../../lib/logging/trace'
 import { updateNoteText } from '../../../lib/repositories/day'
 
 const DEBOUNCE_MS = 600
@@ -42,6 +43,7 @@ export function useNoteEditor(date: string, initialNoteText: string | null): Not
 
   const onBlur = () => {
     clearPendingSave()
+    trace('[useNoteEditor] onBlur save', { date, length: valueRef.current.length })
     updateNoteText(date, normalize(valueRef.current))
     setIsEditing(false)
   }
@@ -52,7 +54,13 @@ export function useNoteEditor(date: string, initialNoteText: string | null): Not
       // it rather than lose it if the page unmounts before the timer fires.
       if (timerRef.current) {
         clearTimeout(timerRef.current)
+        trace('[useNoteEditor] flushing pending save on unmount', {
+          date,
+          length: valueRef.current.length,
+        })
         updateNoteText(date, normalize(valueRef.current))
+      } else {
+        trace('[useNoteEditor] unmount, nothing pending to flush', { date })
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { trace } from '../../../lib/logging/trace'
 import { DayEntry, getAllDays } from '../../../lib/repositories/day'
 
 export type DayDetailFeed = {
@@ -14,11 +15,16 @@ export function useDayDetailFeed(initialDate: string): DayDetailFeed {
   useEffect(() => {
     let cancelled = false
 
+    trace('[useDayDetailFeed] fetching all days', { initialDate })
     getAllDays().then((all) => {
       if (cancelled) return
       const withPhotos = all
         .filter((entry) => entry.photo_path)
         .sort((a, b) => a.date.localeCompare(b.date))
+      trace('[useDayDetailFeed] fetched', {
+        initialDate,
+        count: withPhotos.length,
+      })
       setEntries(withPhotos)
       setIsLoading(false)
     })
@@ -26,6 +32,7 @@ export function useDayDetailFeed(initialDate: string): DayDetailFeed {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const resolvedIndex = entries.findIndex((entry) => entry.date === initialDate)

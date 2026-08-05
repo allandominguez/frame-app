@@ -1,6 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { IconArrowBarToDown, IconArrowForwardUp, IconPlus } from '@tabler/icons-react-native'
+import * as Sharing from 'expo-sharing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Animated, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -8,9 +9,11 @@ import { PhotoPickerSheet } from '../../capture/components/PhotoPickerSheet'
 import { PhotoPreview } from '../../capture/components/PhotoPreview'
 import { useCapture } from '../../capture/hooks/useCapture'
 import { Colors, Radii, Spacing, Typography } from '../../../lib/design'
+import { getTraceLogUri, trace } from '../../../lib/logging/trace'
 import { RootStackParamList } from '../../../navigation/types'
 import { useCalendarData } from '../hooks/useCalendarData'
 import { useDayActionMenu } from '../hooks/useDayActionMenu'
+import { useHoldToUnlock } from '../hooks/useHoldToUnlock'
 import { useMonthPager } from '../hooks/useMonthPager'
 import { MONTH_NAMES } from '../utils'
 import { CalendarGrid } from './CalendarGrid'
@@ -49,6 +52,18 @@ export function CalendarScreen({ navigation }: Props) {
   // displayMonths is ascending (oldest first), so the current month is always last.
   const isViewingCurrentMonth = currentIndex === displayMonths.length - 1
 
+  const handleShareLogs = async () => {
+    const uri = getTraceLogUri()
+    if (!uri) return
+    await Sharing.shareAsync(uri)
+  }
+  const holdToUnlock = useHoldToUnlock(() => {
+    Alert.alert('Share diagnostic logs?', 'Exports the local diagnostic log for this device.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Share', onPress: handleShareLogs },
+    ])
+  })
+
   // 0 = streak counter, 1 = jump-back control; both stay mounted and crossfade via this value.
   const footerTransition = useRef(new Animated.Value(isViewingCurrentMonth ? 0 : 1)).current
   useEffect(() => {
@@ -74,6 +89,7 @@ export function CalendarScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+      trace('[CalendarScreen] focus -> refresh()')
       refresh()
     }, [refresh]),
   )
@@ -142,7 +158,12 @@ export function CalendarScreen({ navigation }: Props) {
                 {index === displayMonths.length - 1 && (
                   <Pressable
                     style={styles.captureTodayButton}
-                    onPress={handleCaptureTodayPress}
+                    onPressIn={holdToUnlock.onPressIn}
+                    onPressOut={holdToUnlock.onPressOut}
+                    onPress={() => {
+                      if (holdToUnlock.consumeLongHold()) return
+                      handleCaptureTodayPress()
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={
                       todayHasPhoto ? "Replace today's photo" : "Add today's photo"
