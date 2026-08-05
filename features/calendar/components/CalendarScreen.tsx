@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { IconArrowBarToDown, IconArrowForwardUp, IconPlus } from '@tabler/icons-react-native'
+import { IconArrowDown, IconArrowForwardUp, IconPlus } from '@tabler/icons-react-native'
 import * as Sharing from 'expo-sharing'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Alert, Animated, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
@@ -229,7 +229,7 @@ export function CalendarScreen({ navigation }: Props) {
             accessibilityLabel="Jump to current month"
             hitSlop={12}
           >
-            <IconArrowBarToDown size={18} color={Colors.textTertiary} />
+            <IconArrowDown size={18} color={Colors.textTertiary} />
           </Pressable>
         </Animated.View>
       </View>
