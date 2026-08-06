@@ -48,6 +48,10 @@ async function applyMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
 export async function openDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (!db) {
     const raw = await SQLite.openDatabaseAsync('still.db')
+    // WAL lets reads/writes run concurrently instead of blocking; busy_timeout retries a
+    // lock wait instead of immediately throwing SQLITE_BUSY.
+    await raw.execAsync('PRAGMA journal_mode = WAL')
+    await raw.execAsync('PRAGMA busy_timeout = 3000')
     await applyMigrations(raw)
     db = __DEV__ ? withTracing(raw) : raw
   }
