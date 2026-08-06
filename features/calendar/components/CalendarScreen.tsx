@@ -7,6 +7,7 @@ import { Alert, Animated, FlatList, Linking, Pressable, StyleSheet, Text, View }
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { PhotoPickerSheet } from '../../capture/components/PhotoPickerSheet'
 import { PhotoPreview } from '../../capture/components/PhotoPreview'
+import { SavingOverlay } from '../../capture/components/SavingOverlay'
 import { useCapture } from '../../capture/hooks/useCapture'
 import { Colors, Radii, Spacing, Typography } from '../../../lib/design'
 import { getTraceLogUri, trace } from '../../../lib/logging/trace'
@@ -248,6 +249,7 @@ export function CalendarScreen({ navigation }: Props) {
         onConfirm={capture.onConfirmPhoto}
         onCancel={capture.onCancelPreview}
       />
+      <SavingOverlay visible={capture.isSaving && !capture.pendingUri} />
     </SafeAreaView>
   )
 }
